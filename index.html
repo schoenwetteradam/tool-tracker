@@ -1,0 +1,322 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tool Change Tracker</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 400px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        
+        .container {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        
+        .header {
+            text-align: center;
+            color: #333;
+            margin-bottom: 20px;
+        }
+        
+        .form-group {
+            margin-bottom: 15px;
+        }
+        
+        label {
+            display: block;
+            font-weight: bold;
+            margin-bottom: 5px;
+            color: #555;
+        }
+        
+        input, select, textarea {
+            width: 100%;
+            padding: 10px;
+            border: 2px solid #ddd;
+            border-radius: 5px;
+            font-size: 16px;
+            box-sizing: border-box;
+        }
+        
+        input:focus, select:focus, textarea:focus {
+            border-color: #4CAF50;
+            outline: none;
+        }
+        
+        .submit-btn {
+            background-color: #4CAF50;
+            color: white;
+            padding: 15px;
+            border: none;
+            border-radius: 5px;
+            font-size: 18px;
+            font-weight: bold;
+            cursor: pointer;
+            width: 100%;
+            margin-top: 10px;
+        }
+        
+        .submit-btn:hover {
+            background-color: #45a049;
+        }
+        
+        .success-message {
+            background-color: #d4edda;
+            color: #155724;
+            padding: 10px;
+            border-radius: 5px;
+            margin-top: 15px;
+            text-align: center;
+            display: none;
+        }
+        
+        .required {
+            color: red;
+        }
+        
+        .time-display {
+            background-color: #e9ecef;
+            padding: 10px;
+            border-radius: 5px;
+            text-align: center;
+            font-weight: bold;
+            margin-bottom: 15px;
+        }
+        
+        .machine-info {
+            background-color: #007bff;
+            color: white;
+            padding: 10px;
+            border-radius: 5px;
+            text-align: center;
+            margin-bottom: 15px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h2>🔧 Tool Change Tracker</h2>
+        </div>
+        
+        <div class="machine-info" id="machineInfo">
+            Machine: [MACHINE_NAME]
+        </div>
+        
+        <div class="time-display" id="currentTime">
+            <!-- Current date/time will be displayed here -->
+        </div>
+        
+        <form id="toolChangeForm">
+            <div class="form-group">
+                <label for="operator">Operator ID/Name <span class="required">*</span></label>
+                <input type="text" id="operator" name="operator" required placeholder="Badge # or Name">
+            </div>
+            
+            <div class="form-group">
+                <label for="operation">Operation <span class="required">*</span></label>
+                <select id="operation" name="operation" required>
+                    <option value="">Select Operation</option>
+                    <option value="OD_TURN">OD Turning</option>
+                    <option value="ID_BORE">ID Boring</option>
+                    <option value="FACE">Facing</option>
+                    <option value="THREAD">Threading</option>
+                    <option value="GROOVE">Grooving</option>
+                    <option value="CUTOFF">Cut-off</option>
+                    <option value="OTHER">Other</option>
+                </select>
+            </div>
+            
+            <div class="form-group">
+                <label for="toolPosition">Tool Position <span class="required">*</span></label>
+                <select id="toolPosition" name="toolPosition" required>
+                    <option value="">Select Position</option>
+                    <option value="T1">T1</option>
+                    <option value="T2">T2</option>
+                    <option value="T3">T3</option>
+                    <option value="T4">T4</option>
+                    <option value="T5">T5</option>
+                    <option value="T6">T6</option>
+                    <option value="T7">T7</option>
+                    <option value="T8">T8</option>
+                    <option value="T9">T9</option>
+                    <option value="T10">T10</option>
+                    <option value="T11">T11</option>
+                    <option value="T12">T12</option>
+                </select>
+            </div>
+            
+            <div class="form-group">
+                <label for="insertType">Insert Type</label>
+                <select id="insertType" name="insertType">
+                    <option value="">Select Insert</option>
+                    <option value="CNMG432">CNMG 432</option>
+                    <option value="CNMG643">CNMG 643</option>
+                    <option value="SNMG432">SNMG 432</option>
+                    <option value="SNMG643">SNMG 643</option>
+                    <option value="TNMG332">TNMG 332</option>
+                    <option value="WNMG432">WNMG 432</option>
+                    <option value="DNMG432">DNMG 432</option>
+                    <option value="CCMT432">CCMT 432</option>
+                    <option value="OTHER">Other</option>
+                </select>
+            </div>
+            
+            <div class="form-group">
+                <label for="reason">Reason for Change <span class="required">*</span></label>
+                <select id="reason" name="reason" required>
+                    <option value="">Select Reason</option>
+                    <option value="WEAR">Normal Wear</option>
+                    <option value="CHIP">Chipped Edge</option>
+                    <option value="BREAK">Tool Broke</option>
+                    <option value="FINISH">Poor Finish</option>
+                    <option value="SIZE">Size Problem</option>
+                    <option value="SCHEDULE">Scheduled Change</option>
+                    <option value="SETUP">New Setup</option>
+                    <option value="OTHER">Other</option>
+                </select>
+            </div>
+            
+            <div class="form-group">
+                <label for="runTime">Approx Run Time (minutes)</label>
+                <input type="number" id="runTime" name="runTime" placeholder="How long did this tool run?" min="1" max="999">
+            </div>
+            
+            <div class="form-group">
+                <label for="material">Material Being Cut</label>
+                <select id="material" name="material">
+                    <option value="">Select Material</option>
+                    <option value="304SS">304 Stainless</option>
+                    <option value="316L">316L Stainless</option>
+                    <option value="321SS">321 Stainless</option>
+                    <option value="309SS">309 Stainless</option>
+                    <option value="310SS">310 Stainless</option>
+                    <option value="CARBON">Carbon Steel</option>
+                    <option value="4140">4140 Steel</option>
+                    <option value="CAST_IRON">Cast Iron</option>
+                    <option value="OTHER">Other</option>
+                </select>
+            </div>
+            
+            <div class="form-group">
+                <label for="partNumber">Part Number (if known)</label>
+                <input type="text" id="partNumber" name="partNumber" placeholder="Customer part #">
+            </div>
+            
+            <div class="form-group">
+                <label for="notes">Notes (optional)</label>
+                <textarea id="notes" name="notes" rows="2" placeholder="Any issues or observations?"></textarea>
+            </div>
+            
+            <button type="submit" class="submit-btn">📝 Submit Tool Change</button>
+        </form>
+        
+        <div class="success-message" id="successMessage">
+            ✅ Tool change logged successfully!
+        </div>
+    </div>
+
+    <script>
+        // Display current date and time
+        function updateTime() {
+            const now = new Date();
+            const timeString = now.toLocaleString();
+            document.getElementById('currentTime').textContent = `Current Time: ${timeString}`;
+        }
+        
+        // Update time immediately and then every minute
+        updateTime();
+        setInterval(updateTime, 60000);
+        
+        // Get machine name from URL parameter if provided
+        const urlParams = new URLSearchParams(window.location.search);
+        const machineName = urlParams.get('machine') || '[MACHINE_NAME]';
+        document.getElementById('machineInfo').textContent = `Machine: ${machineName}`;
+        
+        // Form submission handler
+        document.getElementById('toolChangeForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            // Show loading state
+            const submitBtn = this.querySelector('.submit-btn');
+            const originalText = submitBtn.textContent;
+            submitBtn.textContent = '⏳ Submitting...';
+            submitBtn.disabled = true;
+            
+            // Collect form data
+            const formData = new FormData(this);
+            const data = {};
+            
+            // Convert FormData to regular object
+            for (let [key, value] of formData.entries()) {
+                data[key] = value;
+            }
+            
+            // Add timestamp and machine info
+            data.timestamp = new Date().toISOString();
+            data.machine = machineName;
+            
+            // Send data to Google Sheets
+            sendToGoogleSheets(data)
+                .then(result => {
+                    if (result.status === 'success') {
+                        // Show success message
+                        document.getElementById('successMessage').style.display = 'block';
+                        
+                        // Reset form
+                        this.reset();
+                        
+                        // Hide success message after 5 seconds
+                        setTimeout(() => {
+                            document.getElementById('successMessage').style.display = 'none';
+                        }, 5000);
+                    } else {
+                        throw new Error(result.message || 'Unknown error');
+                    }
+                })
+                .catch(error => {
+                    // Show error message
+                    alert('Error submitting data: ' + error.message + '\n\nPlease try again or contact IT support.');
+                    console.error('Submission error:', error);
+                })
+                .finally(() => {
+                    // Reset button state
+                    submitBtn.textContent = originalText;
+                    submitBtn.disabled = false;
+                });
+        });
+        
+        // Function to send data to Google Sheets (you'll need to implement this)
+        function sendToGoogleSheets(data) {
+            // This would connect to Google Sheets API or use a service like Zapier
+            // For now, it's just a placeholder
+            
+            // Example using Google Apps Script web app:
+            /*
+            fetch('YOUR_GOOGLE_APPS_SCRIPT_URL', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(data)
+            })
+            .then(response => response.json())
+            .then(result => {
+                console.log('Data sent successfully:', result);
+            })
+            .catch(error => {
+                console.error('Error sending data:', error);
+            });
+            */
+        }
+    </script>
+</body>
+</html>
