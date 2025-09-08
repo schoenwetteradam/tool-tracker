@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { Calendar, Clock, User, Wrench, Package, CheckCircle, Save, TrendingUp, RefreshCw } from 'lucide-react';
-import { getEquipment, getToolInventory } from '../lib/supabase';
+import { getEquipment, getToolInventory, addToolChange } from '../lib/supabase';
 
 const ToolChangeForm = () => {
   // Auto-populate timestamp when form loads or QR code is scanned
@@ -166,40 +166,69 @@ const ToolChangeForm = () => {
 
   const handleSubmit = async () => {
     setIsSubmitting(true);
+    setSubmitStatus(null);
     
     try {
+      console.log('🚀 Starting form submission...');
+      
       // Validate required fields
-      const requiredFields = ['date', 'time', 'shift', 'operator', 'work_center', 'equipment_number', 'operation', 'part_number', 'tool_type', 'new_tool_id', 'change_reason'];
+      const requiredFields = [
+        'date', 'time', 'shift', 'operator', 'work_center', 
+        'equipment_number', 'operation', 'part_number', 'new_tool_id', 'change_reason'
+      ];
+      
       const missingFields = requiredFields.filter(field => !formData[field]);
       
       if (missingFields.length > 0) {
+        console.error('❌ Missing required fields:', missingFields);
         throw new Error(`Missing required fields: ${missingFields.join(', ')}`);
       }
 
-      // Prepare data for database (remove empty strings, convert to null)
-      const cleanedData = Object.entries(formData).reduce((acc, [key, value]) => {
-        acc[key] = value === '' ? null : value;
-        return acc;
-      }, {});
+      // Prepare data for database (clean up empty strings and format properly)
+      const cleanedData = {
+        // Date and time fields
+        date: formData.date,
+        time: formData.time,
+        shift: formData.shift ? Number(formData.shift) : null,
+        
+        // People
+        operator: formData.operator || null,
+        supervisor: formData.supervisor || null,
+        
+        // Equipment and operation
+        work_center: formData.work_center || null,
+        equipment_number: formData.equipment_number || null,
+        operation: formData.operation || null,
+        part_number: formData.part_number || null,
+        job_number: formData.job_number || null,
+        
+        // Tool information
+        tool_type: formData.tool_type || null,
+        old_tool_id: formData.old_tool_id || null,
+        new_tool_id: formData.new_tool_id || null,
+        tool_position: formData.tool_position || null,
+        insert_type: formData.insert_type || null,
+        insert_grade: formData.insert_grade || null,
+        
+        // Change details
+        change_reason: formData.change_reason || null,
+        old_tool_condition: formData.old_tool_condition || null,
+        pieces_produced: formData.pieces_produced ? Number(formData.pieces_produced) : null,
+        cycle_time_before: formData.cycle_time_before ? Number(formData.cycle_time_before) : null,
+        cycle_time_after: formData.cycle_time_after ? Number(formData.cycle_time_after) : null,
+        downtime_minutes: formData.downtime_minutes ? Number(formData.downtime_minutes) : null,
+        notes: formData.notes || null,
+        
+        // Add timestamp
+        created_at: new Date().toISOString()
+      };
 
-      // Submit to your backend API
-      const response = await fetch('/api/tool-changes', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('auth_token')}` // If using auth
-        },
-        body: JSON.stringify(cleanedData)
-      });
+      console.log('📋 Submitting cleaned data:', cleanedData);
 
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || 'Failed to save tool change');
-      }
-
-      const result = await response.json();
-      console.log('Tool change saved:', result);
-
+      // Submit directly to Supabase using your addToolChange function
+      const result = await addToolChange(cleanedData);
+      
+      console.log('✅ Tool change saved successfully:', result);
       setSubmitStatus('success');
       
       // Reset form after successful submission
@@ -220,14 +249,32 @@ const ToolChangeForm = () => {
           insert_type: '',
           insert_grade: '',
           change_reason: '',
+          old_tool_condition: '',
+          pieces_produced: '',
+          cycle_time_before: '',
+          cycle_time_after: '',
+          downtime_minutes: '',
           notes: ''
         });
         setSubmitStatus(null);
       }, 3000);
       
     } catch (error) {
-      console.error('Error submitting form:', error);
+      console.error('💥 Error submitting form:', error);
       setSubmitStatus('error');
+      
+      // Log specific error details for debugging
+      if (error.message) {
+        console.error('Error message:', error.message);
+      }
+      if (error.details) {
+        console.error('Error details:', error.details);
+      }
+      if (error.hint) {
+        console.error('Error hint:', error.hint);
+      }
+      
+      // Clear error status after 5 seconds
       setTimeout(() => setSubmitStatus(null), 5000);
     } finally {
       setIsSubmitting(false);
