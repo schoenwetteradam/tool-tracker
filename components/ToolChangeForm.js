@@ -125,6 +125,18 @@ const ToolChangeForm = () => {
     loadData();
   }, []);
 
+  useEffect(() => {
+    const debugLoad = async () => {
+      console.log('🔍 Debug: Testing equipment load...')
+      const equipment = await getEquipment()
+      console.log('🎯 Equipment loaded for dropdown:', equipment)
+      if (equipment.length === 0) {
+        console.warn('⚠️ No equipment returned - check database and permissions')
+      }
+    }
+    debugLoad()
+  }, [])
+
   const handleEquipmentChange = (e) => {
     const number = e.target.value;
     setFormData(prev => ({ ...prev, equipment_number: number }));
