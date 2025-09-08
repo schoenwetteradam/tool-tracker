@@ -385,8 +385,8 @@ const ToolChangeForm = () => {
                 type="text"
                 name="work_center"
                 value={formData.work_center}
-                readOnly
-                className="w-full px-3 py-2 border border-gray-300 rounded-md bg-gray-100"
+                onChange={handleInputChange}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
               />
             </div>
             <div>
@@ -403,7 +403,7 @@ const ToolChangeForm = () => {
                 <option value="">Select equipment</option>
                 {equipmentList.map(eq => (
                   <option key={eq.number} value={eq.number}>
-                    {eq.number} - {eq.description} ({eq.type})
+                    {eq.display_name || `${eq.number} - ${eq.description}`}
                   </option>
                 ))}
               </select>
@@ -466,8 +466,8 @@ const ToolChangeForm = () => {
                 type="text"
                 name="tool_type"
                 value={formData.tool_type}
-                readOnly
-                className="w-full px-3 py-2 border border-gray-300 rounded-md bg-gray-100"
+                onChange={handleInputChange}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500"
               />
             </div>
             <div>
@@ -517,8 +517,8 @@ const ToolChangeForm = () => {
                 type="text"
                 name="insert_type"
                 value={formData.insert_type}
-                readOnly
-                className="w-full px-3 py-2 border border-gray-300 rounded-md bg-gray-100"
+                onChange={handleInputChange}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500"
               />
             </div>
             <div>
@@ -527,8 +527,8 @@ const ToolChangeForm = () => {
                 type="text"
                 name="insert_grade"
                 value={formData.insert_grade}
-                readOnly
-                className="w-full px-3 py-2 border border-gray-300 rounded-md bg-gray-100"
+                onChange={handleInputChange}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500"
               />
             </div>
           </div>
