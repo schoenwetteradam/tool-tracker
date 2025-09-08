@@ -124,7 +124,7 @@
             }
         }
     </style>
-    <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
 </head>
 <body>
     <div class="container">
@@ -137,18 +137,27 @@
             <label for="machineSelect">Select Machine:</label>
             <select id="machineSelect" onchange="updateMachineName()">
                 <option value="">Choose a machine...</option>
-                <option value="DOOSAN_PUMA_5100B_1">Doosan Puma 5100B #1</option>
-                <option value="DOOSAN_PUMA_5100B_2">Doosan Puma 5100B #2</option>
-                <option value="DOOSAN_PUMA_3100XLY">Doosan Puma 3100XLY</option>
-                <option value="DOOSAN_PUMA_4100LB">Doosan Puma 4100LB</option>
-                <option value="CNC_CINCINNATI">CNC Cincinnati</option>
-                <option value="CNC_CINCINNATI_2">CNC Cincinnati #2</option>
-                <option value="CNC_CRAW_SWIFT">CNC Craw/Swift</option>
-                <option value="WOHLENBERG_VDF">Wohlenberg VDF</option>
-                <option value="LEBLOND_4GSR">LeBlond 4GSR-137</option>
-                <option value="CNC_MAZAK">CNC Mazak</option>
-                <option value="CNC_UNIVERSAL_18U">CNC Universal 18U</option>
-                <option value="CLAUSING_CL">Clausing CL Bore</option>
+                <option value="1689">1689 - DOOSAN PUMA 2600SY</option>
+                <option value="1717">1717 - DOOSAN PUMA 5100LYB</option>
+                <option value="1747">1747 - DOOSAN PUMA (Large)</option>
+                <option value="1759">1759 - DOOSAN PUMA 4100LB</option>
+                <option value="1760">1760 - DOOSAN PUMA 3100XLY</option>
+                <option value="1770">1770 - DOOSAN PUMA 5100B #1</option>
+                <option value="1771">1771 - DOOSAN PUMA 5100B #2</option>
+                <option value="1781">1781 - CLAUSING CL 35160</option>
+                <option value="1405">1405 - CNC CRAWFORD</option>
+                <option value="1411">1411 - CINCINNATI 18U060</option>
+                <option value="1419">1419 - CINCINNATI 21U100</option>
+                <option value="1473">1473 - CNC 24U</option>
+                <option value="1528">1528 - MAZAK CNC</option>
+                <option value="1531">1531 - CNC 18U UNIV</option>
+                <option value="1549">1549 - CINCINNATI 28U</option>
+                <option value="1577">1577 - CINCINNATI 24U TWIN DISC</option>
+                <option value="1681">1681 - CINTURN 28U (29U)</option>
+                <option value="1254">1254 - LEBLOND BORING #1</option>
+                <option value="1340">1340 - NILES BORING #2</option>
+                <option value="1383">1383 - NILES BORING #3</option>
+                <option value="1389">1389 - NILES BORING #4</option>
                 <option value="CUSTOM">Custom Machine Name</option>
             </select>
         </div>
@@ -160,9 +169,13 @@
         
         <div class="form-group">
             <label for="baseUrl">Form URL (where you host the form):</label>
-            <input type="text" id="baseUrl" placeholder="https://schoenwetteradam.github.io/tool-tracker/" value="https://schoenwetteradam.github.io/tool-tracker/">
+            <input 
+                type="text" 
+                id="baseUrl" 
+                placeholder="https://tool-tracker-eight.vercel.app" 
+                value="https://tool-tracker-eight.vercel.app">
             <small style="color: #666; font-size: 12px;">
-                This should be your GitHub Pages URL or wherever you hosted the main form
+                This should be your Vercel app URL (root domain, no /tool-change path needed)
             </small>
         </div>
         
@@ -170,9 +183,9 @@
         
         <div class="qr-output" id="qrOutput">
             <div class="machine-name" id="displayMachine"></div>
-            <div class="qr-code">
-                <canvas id="qrCanvas"></canvas>
-            </div>
+              <div class="qr-code">
+                  <div id="qrCanvas"></div>
+              </div>
             <div>
                 <strong>Scan to log tool changes</strong><br>
                 <small id="qrUrl"></small>
@@ -216,52 +229,47 @@
         function generateQR() {
             const machineSelect = document.getElementById('machineSelect');
             const customMachine = document.getElementById('customMachine');
-            const baseUrl = document.getElementById('baseUrl').value;
-            
-            let machineName = '';
+            const baseUrl = document.getElementById('baseUrl').value.replace(/\/$/, '');
+
+            let equipmentNumber = '';
             let machineDisplay = '';
-            
+
             if (machineSelect.value === 'CUSTOM') {
-                machineName = customMachine.value.trim();
-                machineDisplay = machineName;
+                equipmentNumber = customMachine.value.trim();
+                machineDisplay = equipmentNumber;
             } else if (machineSelect.value) {
-                machineName = machineSelect.value;
+                equipmentNumber = machineSelect.value;
                 machineDisplay = machineSelect.options[machineSelect.selectedIndex].text;
             }
-            
-            if (!machineName || !baseUrl) {
-                alert('Please select a machine and enter the form URL');
+
+            if (!equipmentNumber) {
+                alert('Please select a machine or enter a custom machine name');
                 return;
             }
-            
-            // Create the full URL with machine parameter
-            const fullUrl = `${baseUrl}?machine=${encodeURIComponent(machineDisplay)}`;
-            
-            // Generate QR code
+
+            const qrUrl = `${baseUrl}/?equipment=${encodeURIComponent(equipmentNumber)}&workcenter=${encodeURIComponent(equipmentNumber)}`;
+            console.log('Generated QR URL:', qrUrl);
+
+            document.getElementById('displayMachine').textContent = machineDisplay;
+            document.getElementById('qrUrl').textContent = qrUrl;
+
             const canvas = document.getElementById('qrCanvas');
-            QRCode.toCanvas(canvas, fullUrl, {
-                width: 300,
-                height: 300,
-                color: {
-                    dark: '#000000',
-                    light: '#FFFFFF'
-                }
-            }, function(error) {
-                if (error) {
-                    console.error(error);
-                    alert('Error generating QR code');
-                    return;
-                }
-                
-                // Show the output
-                document.getElementById('displayMachine').textContent = machineDisplay;
-                document.getElementById('qrUrl').textContent = fullUrl;
-                document.getElementById('qrOutput').style.display = 'block';
-                
-                // Update print section
-                document.getElementById('printMachine').textContent = machineDisplay;
-                document.getElementById('printQR').innerHTML = canvas.outerHTML;
-            });
+            if (window.QRCode) {
+                canvas.innerHTML = '';
+                const qr = new QRCode(canvas, {
+                    text: qrUrl,
+                    width: 256,
+                    height: 256,
+                    colorDark: "#000000",
+                    colorLight: "#ffffff",
+                    correctLevel: QRCode.CorrectLevel.M
+                });
+            }
+
+            document.getElementById('qrOutput').style.display = 'block';
+
+            document.getElementById('printMachine').textContent = machineDisplay;
+            document.getElementById('printQR').innerHTML = canvas.innerHTML;
         }
         
         function printQR() {
@@ -271,10 +279,16 @@
         }
         
         function downloadQR() {
-            const canvas = document.getElementById('qrCanvas');
+            const container = document.getElementById('qrCanvas');
             const link = document.createElement('a');
             link.download = `QR_${document.getElementById('displayMachine').textContent.replace(/\s+/g, '_')}.png`;
-            link.href = canvas.toDataURL();
+            const img = container.querySelector('img');
+            const canvas = container.querySelector('canvas');
+            if (img) {
+                link.href = img.src;
+            } else if (canvas && canvas.toDataURL) {
+                link.href = canvas.toDataURL();
+            }
             link.click();
         }
     </script>
