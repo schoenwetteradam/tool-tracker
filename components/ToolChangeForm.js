@@ -1,6 +1,7 @@
 // components/ToolChangeForm.js - Spuncast Tool Change Tracking (Fixed)
 import React, { useState, useEffect } from 'react';
-import { Calendar, Clock, User, Wrench, Package, AlertCircle, CheckCircle, Save, TrendingUp, Target, Zap, RefreshCw } from 'lucide-react';
+import { Calendar, Clock, User, Wrench, Package, CheckCircle, Save, TrendingUp, RefreshCw } from 'lucide-react';
+import { getEquipment, getToolInventory } from '../lib/supabase';
 
 const ToolChangeForm = () => {
   // Auto-populate timestamp when form loads or QR code is scanned
@@ -25,14 +26,14 @@ const ToolChangeForm = () => {
     ...getCurrentDateTime(),
     operator: '',
     supervisor: '',
-    
+
     // Machine/Operation Info
     work_center: '',
     equipment_number: '',
     operation: '',
     part_number: '',
     job_number: '',
-    
+
     // Tool Information
     tool_type: '',
     old_tool_id: '',
@@ -40,32 +41,19 @@ const ToolChangeForm = () => {
     tool_position: '',
     insert_type: '',
     insert_grade: '',
-    
+
     // Change Details & Performance Impact
     change_reason: '',
     old_tool_condition: '',
     pieces_produced: '',
-    cycle_time_before: '',
-    cycle_time_after: '',
-    
-    // Quality & Throughput Metrics
-    dimension_check: '',
-    surface_finish: '',
     scrap_pieces: '',
     rework_pieces: '',
-    downtime_minutes: '',
-    
-    // Improvement Tracking
-    tool_life_expected: '',
-    tool_life_actual: '',
-    feeds_speeds_changed: '',
-    coolant_condition: '',
-    
-    // Root Cause & Actions
     failure_mode: '',
-    corrective_action: '',
     notes: ''
   });
+
+  const [toolInventory, setToolInventory] = useState([]);
+  const [equipmentList, setEquipmentList] = useState([]);
 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitStatus, setSubmitStatus] = useState(null);
@@ -115,7 +103,7 @@ const ToolChangeForm = () => {
     const urlParams = new URLSearchParams(window.location.search);
     const equipmentParam = urlParams.get('equipment');
     const workCenterParam = urlParams.get('workcenter');
-    
+
     if (equipmentParam) {
       setFormData(prev => ({
         ...prev,
@@ -124,6 +112,41 @@ const ToolChangeForm = () => {
       }));
     }
   }, []);
+
+  useEffect(() => {
+    const loadData = async () => {
+      try {
+        const [tools, equipment] = await Promise.all([
+          getToolInventory(),
+          getEquipment()
+        ]);
+        setToolInventory(tools || []);
+        setEquipmentList(equipment || []);
+      } catch (error) {
+        console.error('Error loading reference data:', error);
+      }
+    };
+    loadData();
+  }, []);
+
+  const handleEquipmentChange = (e) => {
+    const number = e.target.value;
+    setFormData(prev => ({ ...prev, equipment_number: number }));
+    const eq = equipmentList.find(eq => eq.number === number);
+    setFormData(prev => ({ ...prev, work_center: eq?.work_center || '' }));
+  };
+
+  const handleToolSelect = (e) => {
+    const id = e.target.value;
+    const tool = toolInventory.find(t => t.tool_id === id);
+    setFormData(prev => ({
+      ...prev,
+      new_tool_id: id,
+      tool_type: tool?.tool_type || '',
+      insert_type: tool?.insert_type || '',
+      insert_grade: tool?.insert_grade || ''
+    }));
+  };
 
   const handleInputChange = (e) => {
     const { name, value, type } = e.target;
@@ -191,19 +214,9 @@ const ToolChangeForm = () => {
           change_reason: '',
           old_tool_condition: '',
           pieces_produced: '',
-          cycle_time_before: '',
-          cycle_time_after: '',
-          dimension_check: '',
-          surface_finish: '',
           scrap_pieces: '',
           rework_pieces: '',
-          downtime_minutes: '',
-          tool_life_expected: '',
-          tool_life_actual: '',
-          feeds_speeds_changed: '',
-          coolant_condition: '',
           failure_mode: '',
-          corrective_action: '',
           notes: ''
         });
         setSubmitStatus(null);
@@ -219,60 +232,12 @@ const ToolChangeForm = () => {
   };
 
   // Real equipment numbers from Spuncast facility
-  const equipmentNumbers = [
-    // CNC Lathes - Modern Doosan PUMA Series
-    { number: '1689', description: 'DOOSAN PUMA 2600SY', type: 'CNC Lathe' },
-    { number: '1717', description: 'DOOSAN PUMA 5100LYB', type: 'CNC Lathe' },
-    { number: '1747', description: 'DOOSAN PUMA (Large)', type: 'CNC Lathe' },
-    { number: '1759', description: 'DOOSAN PUMA 4100LB', type: 'CNC Lathe' },
-    { number: '1760', description: 'DOOSAN PUMA 3100XLY', type: 'CNC Lathe' },
-    { number: '1770', description: 'DOOSAN PUMA 5100B #1', type: 'CNC Lathe' },
-    { number: '1771', description: 'DOOSAN PUMA 5100B #2', type: 'CNC Lathe' },
-    { number: '1781', description: 'CLAUSING CL 35160', type: 'CNC Lathe' },
-    
-    // CNC Lathes - Cincinnati Series
-    { number: '1405', description: 'CNC CRAWFORD', type: 'CNC Lathe' },
-    { number: '1411', description: 'CINCINNATI 18U060', type: 'CNC Lathe' },
-    { number: '1419', description: 'CINCINNATI 21U100', type: 'CNC Lathe' },
-    { number: '1473', description: 'CNC 24U', type: 'CNC Lathe' },
-    { number: '1528', description: 'MAZAK CNC', type: 'CNC Lathe' },
-    { number: '1531', description: 'CNC 18U UNIV', type: 'CNC Lathe' },
-    { number: '1549', description: 'CINCINNATI 28U', type: 'CNC Lathe' },
-    { number: '1577', description: 'CINCINNATI 24U TWIN DISC', type: 'CNC Lathe' },
-    { number: '1681', description: 'CINTURN 28U (29U)', type: 'CNC Lathe' },
-    
-    // Boring Machines
-    { number: '1254', description: 'LEBLOND BORING #1', type: 'Boring Machine' },
-    { number: '1340', description: 'NILES BORING #2', type: 'Boring Machine' },
-    { number: '1383', description: 'NILES BORING #3', type: 'Boring Machine' },
-    { number: '1389', description: 'LEBLOND DEEP HOLE #3', type: 'Boring Machine' },
-    { number: '1491', description: 'LEBLOND DANILUK', type: 'Boring Machine' },
-    { number: '1548', description: 'WOHLENBERG BORING', type: 'Boring Machine' },
-    { number: '1585', description: 'LEBLOND BORING', type: 'Boring Machine' },
-    { number: '1625', description: 'SINGLE PASS DEEP HOLE', type: 'Boring Machine' },
-    { number: '1727', description: 'GISHOLT 5L TURRET', type: 'Boring Machine' },
-    
-    // Mills
-    { number: '1521', description: 'BRIDGEPORT VERTICAL', type: 'Mill' },
-    { number: '1631', description: 'MILACRON HORIZONTAL', type: 'CNC Mill' },
-    { number: '1690', description: 'DOOSAN PUMA VERTICAL', type: 'CNC Mill' },
-    
-    // Manual/Other
-    { number: '1329', description: 'POREBA ENGINE #4', type: 'Manual Lathe' },
-    { number: '1394', description: 'LION ENGINE', type: 'Manual Lathe' },
-    { number: '1492', description: 'MONARCH TURN', type: 'Manual Lathe' },
-    { number: '1624', description: 'DAEWOO LATHE', type: 'CNC Lathe' }
-  ];
 
-  const toolTypes = ['Carbide Insert', 'Drill Bit', 'End Mill', 'Face Mill', 'Boring Bar', 'Tap', 'Reamer', 'Threading Tool', 'Grooving Tool', 'Parting Tool', 'Other'];
-  const insertTypes = ['CNMG', 'SNMG', 'TNMG', 'WNMG', 'RCMT', 'DNMG', 'VCMT', 'CCMT', 'CCGT', 'DCMT', 'TNMC', 'CNMC', 'Other'];
   const changeReasons = ['Tool Wear', 'Tool Breakage', 'Poor Surface Finish', 'Dimensional Issues', 'Chatter/Vibration', 'Setup Change', 'Scheduled Replacement', 'Programming Change', 'Quality Issue', 'Other'];
   const toolConditions = ['Normal Wear', 'Excessive Wear', 'Chipped Edge', 'Broken', 'Built-up Edge', 'Crater Wear', 'Flank Wear', 'Thermal Damage', 'Other'];
   const shifts = [1, 2, 3];
-  const workCenters = ['010', '040', '202', '203', '204', '205', '259'];
   const operations = ['Rough Turn', 'Finish Turn', 'Boring', 'Facing', 'Threading', 'Drilling', 'Milling', 'Grooving', 'Parting', 'Chamfering', 'Contouring', 'Deep Hole Drilling'];
   const failureModes = ['Gradual Wear', 'Sudden Fracture', 'Edge Chipping', 'Thermal Damage', 'Adhesive Wear', 'Abrasive Wear', 'Fatigue Failure', 'Built-up Edge', 'Oxidation', 'Other'];
-  const coolantConditions = ['Good', 'Contaminated', 'Low Flow', 'Wrong Type', 'None Used', 'Needs Change', 'Too Hot', 'Poor Quality'];
 
   // Real operators from Spuncast production data
   const operators = [
@@ -414,21 +379,14 @@ const ToolChangeForm = () => {
           </h2>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Work Center <span className="text-red-500">*</span>
-              </label>
-              <select
+              <label className="block text-sm font-medium text-gray-700 mb-1">Work Center</label>
+              <input
+                type="text"
                 name="work_center"
                 value={formData.work_center}
-                onChange={handleInputChange}
-                required
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
-              >
-                <option value="">Select work center</option>
-                {workCenters.map(wc => (
-                  <option key={wc} value={wc}>{wc}</option>
-                ))}
-              </select>
+                readOnly
+                className="w-full px-3 py-2 border border-gray-300 rounded-md bg-gray-100"
+              />
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -437,12 +395,12 @@ const ToolChangeForm = () => {
               <select
                 name="equipment_number"
                 value={formData.equipment_number}
-                onChange={handleInputChange}
+                onChange={handleEquipmentChange}
                 required
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
               >
                 <option value="">Select equipment</option>
-                {equipmentNumbers.map(eq => (
+                {equipmentList.map(eq => (
                   <option key={eq.number} value={eq.number}>
                     {eq.number} - {eq.description} ({eq.type})
                   </option>
@@ -502,21 +460,14 @@ const ToolChangeForm = () => {
           </h2>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Tool Type <span className="text-red-500">*</span>
-              </label>
-              <select
+              <label className="block text-sm font-medium text-gray-700 mb-1">Tool Type</label>
+              <input
+                type="text"
                 name="tool_type"
                 value={formData.tool_type}
-                onChange={handleInputChange}
-                required
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500"
-              >
-                <option value="">Select tool type</option>
-                {toolTypes.map(type => (
-                  <option key={type} value={type}>{type}</option>
-                ))}
-              </select>
+                readOnly
+                className="w-full px-3 py-2 border border-gray-300 rounded-md bg-gray-100"
+              />
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Old Tool ID</label>
@@ -533,15 +484,20 @@ const ToolChangeForm = () => {
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 New Tool ID <span className="text-red-500">*</span>
               </label>
-              <input
-                type="text"
+              <select
                 name="new_tool_id"
                 value={formData.new_tool_id}
-                onChange={handleInputChange}
+                onChange={handleToolSelect}
                 required
-                placeholder="Tool being installed"
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500"
-              />
+              >
+                <option value="">Select tool</option>
+                {toolInventory.map(tool => (
+                  <option key={tool.tool_id} value={tool.tool_id}>
+                    {tool.tool_id} - {tool.description}
+                  </option>
+                ))}
+              </select>
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Tool Position</label>
@@ -556,17 +512,13 @@ const ToolChangeForm = () => {
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Insert Type</label>
-              <select
+              <input
+                type="text"
                 name="insert_type"
                 value={formData.insert_type}
-                onChange={handleInputChange}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500"
-              >
-                <option value="">Select insert type</option>
-                {insertTypes.map(type => (
-                  <option key={type} value={type}>{type}</option>
-                ))}
-              </select>
+                readOnly
+                className="w-full px-3 py-2 border border-gray-300 rounded-md bg-gray-100"
+              />
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Insert Grade</label>
@@ -574,9 +526,8 @@ const ToolChangeForm = () => {
                 type="text"
                 name="insert_grade"
                 value={formData.insert_grade}
-                onChange={handleInputChange}
-                placeholder="e.g., AH120, T9025, IC807"
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500"
+                readOnly
+                className="w-full px-3 py-2 border border-gray-300 rounded-md bg-gray-100"
               />
             </div>
           </div>
@@ -670,150 +621,14 @@ const ToolChangeForm = () => {
           </div>
         </div>
 
-        {/* Throughput Optimization */}
-        <div className="bg-indigo-50 p-6 rounded-lg">
-          <h2 className="text-xl font-semibold text-indigo-900 mb-4 flex items-center">
-            <Target className="mr-2" size={20} />
-            Throughput & Efficiency Metrics
-          </h2>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Cycle Time Before (min)</label>
-              <input
-                type="number"
-                step="0.1"
-                name="cycle_time_before"
-                value={formData.cycle_time_before}
-                onChange={handleInputChange}
-                placeholder="Cycle time with old tool"
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Cycle Time After (min)</label>
-              <input
-                type="number"
-                step="0.1"
-                name="cycle_time_after"
-                value={formData.cycle_time_after}
-                onChange={handleInputChange}
-                placeholder="Cycle time with new tool"
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Downtime (minutes)</label>
-              <input
-                type="number"
-                name="downtime_minutes"
-                value={formData.downtime_minutes}
-                onChange={handleInputChange}
-                placeholder="Machine downtime for change"
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Expected Tool Life</label>
-              <input
-                type="number"
-                name="tool_life_expected"
-                value={formData.tool_life_expected}
-                onChange={handleInputChange}
-                placeholder="Expected pieces"
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Actual Tool Life</label>
-              <input
-                type="number"
-                name="tool_life_actual"
-                value={formData.tool_life_actual}
-                onChange={handleInputChange}
-                placeholder="Actual pieces produced"
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Feeds/Speeds Changed?</label>
-              <select
-                name="feeds_speeds_changed"
-                value={formData.feeds_speeds_changed}
-                onChange={handleInputChange}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
-              >
-                <option value="">Select</option>
-                <option value="Yes">Yes</option>
-                <option value="No">No</option>
-              </select>
-            </div>
-          </div>
-        </div>
 
-        {/* Process Optimization */}
-        <div className="bg-orange-50 p-6 rounded-lg">
-          <h2 className="text-xl font-semibold text-orange-900 mb-4 flex items-center">
-            <Zap className="mr-2" size={20} />
-            Process & Quality Details
-          </h2>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Coolant Condition</label>
-              <select
-                name="coolant_condition"
-                value={formData.coolant_condition}
-                onChange={handleInputChange}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500"
-              >
-                <option value="">Select condition</option>
-                {coolantConditions.map(condition => (
-                  <option key={condition} value={condition}>{condition}</option>
-                ))}
-              </select>
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Dimension Check</label>
-              <input
-                type="text"
-                name="dimension_check"
-                value={formData.dimension_check}
-                onChange={handleInputChange}
-                placeholder="Within tolerance, +0.001, etc."
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Surface Finish</label>
-              <input
-                type="text"
-                name="surface_finish"
-                value={formData.surface_finish}
-                onChange={handleInputChange}
-                placeholder="e.g., 63 Ra, Good, Poor"
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500"
-              />
-            </div>
-          </div>
-        </div>
-
-        {/* Root Cause & Corrective Actions */}
+        {/* Additional Notes */}
         <div className="bg-red-50 p-6 rounded-lg">
           <h2 className="text-xl font-semibold text-red-900 mb-4 flex items-center">
-            <AlertCircle className="mr-2" size={20} />
-            Root Cause & Corrective Actions
+            <CheckCircle className="mr-2" size={20} />
+            Notes
           </h2>
           <div className="grid grid-cols-1 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Corrective Action Taken</label>
-              <textarea
-                name="corrective_action"
-                value={formData.corrective_action}
-                onChange={handleInputChange}
-                rows="3"
-                placeholder="What actions were taken to prevent this issue from recurring? (e.g., changed feeds/speeds, improved coolant flow, better tool selection, etc.)"
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-red-500"
-              />
-            </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Additional Notes & Observations</label>
               <textarea
@@ -850,19 +665,9 @@ const ToolChangeForm = () => {
               change_reason: '',
               old_tool_condition: '',
               pieces_produced: '',
-              cycle_time_before: '',
-              cycle_time_after: '',
-              dimension_check: '',
-              surface_finish: '',
               scrap_pieces: '',
               rework_pieces: '',
-              downtime_minutes: '',
-              tool_life_expected: '',
-              tool_life_actual: '',
-              feeds_speeds_changed: '',
-              coolant_condition: '',
               failure_mode: '',
-              corrective_action: '',
               notes: ''
             })}
             className="px-6 py-3 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors"
@@ -879,48 +684,6 @@ const ToolChangeForm = () => {
           </button>
         </div>
 
-        {/* Performance Impact Summary */}
-        {(formData.cycle_time_before && formData.cycle_time_after) && (
-          <div className="bg-gray-50 p-6 rounded-lg border-l-4 border-blue-500">
-            <h3 className="text-lg font-semibold text-gray-900 mb-2">Performance Impact Summary</h3>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
-              <div>
-                <span className="font-medium">Cycle Time Change:</span>
-                <span className={`ml-2 ${
-                  (formData.cycle_time_after - formData.cycle_time_before) < 0 
-                    ? 'text-green-600' 
-                    : 'text-red-600'
-                }`}>
-                  {(formData.cycle_time_after - formData.cycle_time_before).toFixed(1)} minutes
-                </span>
-              </div>
-              {formData.tool_life_expected && formData.tool_life_actual && (
-                <div>
-                  <span className="font-medium">Tool Life Performance:</span>
-                  <span className={`ml-2 ${
-                    (formData.tool_life_actual / formData.tool_life_expected) >= 0.8 
-                      ? 'text-green-600' 
-                      : 'text-red-600'
-                  }`}>
-                    {((formData.tool_life_actual / formData.tool_life_expected) * 100).toFixed(0)}% of expected
-                  </span>
-                </div>
-              )}
-              {formData.scrap_pieces && formData.pieces_produced && (
-                <div>
-                  <span className="font-medium">Scrap Rate:</span>
-                  <span className={`ml-2 ${
-                    (formData.scrap_pieces / formData.pieces_produced) < 0.02 
-                      ? 'text-green-600' 
-                      : 'text-red-600'
-                  }`}>
-                    {((formData.scrap_pieces / formData.pieces_produced) * 100).toFixed(1)}%
-                  </span>
-                </div>
-              )}
-            </div>
-          </div>
-        )}
       </div>
     </div>
   );
