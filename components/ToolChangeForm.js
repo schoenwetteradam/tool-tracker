@@ -1,5 +1,6 @@
 // components/ToolChangeForm.js - Spuncast Tool Change Tracking (Fixed)
 import React, { useState, useEffect } from 'react';
+import Link from 'next/link';
 import { Calendar, Clock, User, Wrench, Package, CheckCircle, Save, TrendingUp, RefreshCw } from 'lucide-react';
 import { getEquipment, getToolInventory } from '../lib/supabase';
 
@@ -44,11 +45,6 @@ const ToolChangeForm = () => {
 
     // Change Details & Performance Impact
     change_reason: '',
-    old_tool_condition: '',
-    pieces_produced: '',
-    scrap_pieces: '',
-    rework_pieces: '',
-    failure_mode: '',
     notes: ''
   });
 
@@ -212,11 +208,6 @@ const ToolChangeForm = () => {
           insert_type: '',
           insert_grade: '',
           change_reason: '',
-          old_tool_condition: '',
-          pieces_produced: '',
-          scrap_pieces: '',
-          rework_pieces: '',
-          failure_mode: '',
           notes: ''
         });
         setSubmitStatus(null);
@@ -234,10 +225,8 @@ const ToolChangeForm = () => {
   // Real equipment numbers from Spuncast facility
 
   const changeReasons = ['Tool Wear', 'Tool Breakage', 'Poor Surface Finish', 'Dimensional Issues', 'Chatter/Vibration', 'Setup Change', 'Scheduled Replacement', 'Programming Change', 'Quality Issue', 'Other'];
-  const toolConditions = ['Normal Wear', 'Excessive Wear', 'Chipped Edge', 'Broken', 'Built-up Edge', 'Crater Wear', 'Flank Wear', 'Thermal Damage', 'Other'];
   const shifts = [1, 2, 3];
   const operations = ['Rough Turn', 'Finish Turn', 'Boring', 'Facing', 'Threading', 'Drilling', 'Milling', 'Grooving', 'Parting', 'Chamfering', 'Contouring', 'Deep Hole Drilling'];
-  const failureModes = ['Gradual Wear', 'Sudden Fracture', 'Edge Chipping', 'Thermal Damage', 'Adhesive Wear', 'Abrasive Wear', 'Fatigue Failure', 'Built-up Edge', 'Oxidation', 'Other'];
 
   // Real operators from Spuncast production data
   const operators = [
@@ -539,7 +528,7 @@ const ToolChangeForm = () => {
             <TrendingUp className="mr-2" size={20} />
             Performance & Quality Impact
           </h2>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 Change Reason <span className="text-red-500">*</span>
@@ -557,66 +546,10 @@ const ToolChangeForm = () => {
                 ))}
               </select>
             </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Old Tool Condition</label>
-              <select
-                name="old_tool_condition"
-                value={formData.old_tool_condition}
-                onChange={handleInputChange}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-yellow-500"
-              >
-                <option value="">Select condition</option>
-                {toolConditions.map(condition => (
-                  <option key={condition} value={condition}>{condition}</option>
-                ))}
-              </select>
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Failure Mode</label>
-              <select
-                name="failure_mode"
-                value={formData.failure_mode}
-                onChange={handleInputChange}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-yellow-500"
-              >
-                <option value="">Select failure mode</option>
-                {failureModes.map(mode => (
-                  <option key={mode} value={mode}>{mode}</option>
-                ))}
-              </select>
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Pieces Produced</label>
-              <input
-                type="number"
-                name="pieces_produced"
-                value={formData.pieces_produced}
-                onChange={handleInputChange}
-                placeholder="Parts made with old tool"
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-yellow-500"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Scrap Pieces</label>
-              <input
-                type="number"
-                name="scrap_pieces"
-                value={formData.scrap_pieces}
-                onChange={handleInputChange}
-                placeholder="Parts scrapped due to tool"
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-yellow-500"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Rework Pieces</label>
-              <input
-                type="number"
-                name="rework_pieces"
-                value={formData.rework_pieces}
-                onChange={handleInputChange}
-                placeholder="Parts requiring rework"
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-yellow-500"
-              />
+            <div className="flex items-end">
+              <Link href="/additional-data" className="text-blue-600 underline">
+                Provide additional performance data
+              </Link>
             </div>
           </div>
         </div>
@@ -663,11 +596,6 @@ const ToolChangeForm = () => {
               insert_type: '',
               insert_grade: '',
               change_reason: '',
-              old_tool_condition: '',
-              pieces_produced: '',
-              scrap_pieces: '',
-              rework_pieces: '',
-              failure_mode: '',
               notes: ''
             })}
             className="px-6 py-3 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors"
