@@ -721,6 +721,3 @@ const ToolChangeForm = () => {
 };
 
 export default ToolChangeForm;
-};
-
-export default ToolChangeForm;
