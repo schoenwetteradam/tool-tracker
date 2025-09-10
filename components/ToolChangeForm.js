@@ -1,11 +1,11 @@
-// components/ToolChangeForm.js - Spuncast Tool Change Tracking (Fixed)
+// components/ToolChangeForm.js - Updated per requirements
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { Calendar, Clock, User, Wrench, Package, CheckCircle, Save, TrendingUp, RefreshCw } from 'lucide-react';
 import { getEquipment, getToolInventory, addToolChange } from '../lib/supabase';
 
 const ToolChangeForm = () => {
-  // Auto-populate timestamp when form loads or QR code is scanned
+  // Auto-populate timestamp when form loads
   const getCurrentDateTime = () => {
     const now = new Date();
     return {
@@ -26,7 +26,6 @@ const ToolChangeForm = () => {
     // Basic Info - Auto-populated
     ...getCurrentDateTime(),
     operator: '',
-    supervisor: '',
 
     // Machine/Operation Info
     work_center: '',
@@ -35,76 +34,90 @@ const ToolChangeForm = () => {
     part_number: '',
     job_number: '',
 
-    // Tool Information
-    tool_type: '',
+    // Tool Information - Updated structure
     old_tool_id: '',
     new_tool_id: '',
     tool_position: '',
+    first_rougher: '',  // New field for 1st Rougher insert
+    finish_tool: '',    // New field for Finish Tool insert
     insert_type: '',
     insert_grade: '',
 
     // Change Details & Performance Impact
     change_reason: '',
+    old_tool_condition: '',
+    pieces_produced: '',
+    cycle_time_before: '',
+    cycle_time_after: '',
+    downtime_minutes: '',
     notes: ''
   });
 
   const [toolInventory, setToolInventory] = useState([]);
   const [equipmentList, setEquipmentList] = useState([]);
-
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitStatus, setSubmitStatus] = useState(null);
 
-  // Function to refresh timestamp manually
-  const refreshTimestamp = () => {
-    const currentDateTime = getCurrentDateTime();
-    setFormData(prev => ({
-      ...prev,
-      date: currentDateTime.date,
-      time: currentDateTime.time,
-      shift: currentDateTime.shift
-    }));
-  };
+  // Predefined lists
+  const shifts = [1, 2, 3];
+  const operators = [
+    'John Smith', 'Jane Doe', 'Mike Johnson', 'Sarah Wilson', 
+    'Tom Rodriguez', 'Lisa Chen', 'Dave Brown', 'Amy Garcia',
+    'Chris Lee', 'Maria Gonzalez'
+  ];
 
-  // Auto-update timestamp whenever form is loaded (for QR code scanning)
+  // Insert options for dropdowns - organized by type
+  const rougherInserts = [
+    'CNMG-432',
+    'CNMG-433', 
+    'DNMG-432',
+    'DNMG-433',
+    'TNMG-432',
+    'TNMG-433',
+    'VNMG-432',
+    'VNMG-433'
+  ];
+
+  const finishInserts = [
+    'CCMT-321',
+    'CCMT-432',
+    'DCMT-321', 
+    'DCMT-432',
+    'TCMT-321',
+    'TCMT-432',
+    'VCMT-321',
+    'VCMT-432'
+  ];
+
+  const changeReasons = [
+    'Normal Wear',
+    'Chipped Edge', 
+    'Tool Breakage',
+    'Poor Finish',
+    'Size Problems',
+    'Scheduled Maintenance'
+  ];
+
+  const toolConditions = [
+    'Good',
+    'Fair', 
+    'Poor',
+    'Broken',
+    'Chipped',
+    'Worn'
+  ];
+
+  // Load equipment data from QR scanning or manual selection
   useEffect(() => {
-    const updateCurrentTime = () => {
-      const currentDateTime = getCurrentDateTime();
+    if (typeof window !== 'undefined') {
+      const urlParams = new URLSearchParams(window.location.search);
+      const equipment = urlParams.get('equipment');
+      const workCenter = urlParams.get('work_center');
+      
       setFormData(prev => ({
         ...prev,
-        date: currentDateTime.date,
-        time: currentDateTime.time,
-        shift: currentDateTime.shift
-      }));
-    };
-
-    updateCurrentTime();
-    const timeInterval = setInterval(updateCurrentTime, 60000);
-
-    const handleVisibilityChange = () => {
-      if (!document.hidden) {
-        updateCurrentTime();
-      }
-    };
-
-    document.addEventListener('visibilitychange', handleVisibilityChange);
-
-    return () => {
-      clearInterval(timeInterval);
-      document.removeEventListener('visibilitychange', handleVisibilityChange);
-    };
-  }, []);
-
-  // Extract equipment number from URL if coming from QR code
-  useEffect(() => {
-    const urlParams = new URLSearchParams(window.location.search);
-    const equipmentParam = urlParams.get('equipment');
-    const workCenterParam = urlParams.get('workcenter');
-
-    if (equipmentParam) {
-      setFormData(prev => ({
-        ...prev,
-        equipment_number: equipmentParam,
-        work_center: workCenterParam || prev.work_center
+        equipment_number: equipment || prev.equipment_number,
+        work_center: workCenter || prev.work_center
       }));
     }
   }, []);
@@ -125,23 +138,14 @@ const ToolChangeForm = () => {
     loadData();
   }, []);
 
-  useEffect(() => {
-    const debugLoad = async () => {
-      console.log('🔍 Debug: Testing equipment load...')
-      const equipment = await getEquipment()
-      console.log('🎯 Equipment loaded for dropdown:', equipment)
-      if (equipment.length === 0) {
-        console.warn('⚠️ No equipment returned - check database and permissions')
-      }
-    }
-    debugLoad()
-  }, [])
-
   const handleEquipmentChange = (e) => {
     const number = e.target.value;
     setFormData(prev => ({ ...prev, equipment_number: number }));
-    const eq = equipmentList.find(eq => eq.number === number);
-    setFormData(prev => ({ ...prev, work_center: eq?.work_center || '' }));
+    const eq = equipmentList.find(eq => eq.equipment_number === number);
+    setFormData(prev => ({ 
+      ...prev, 
+      work_center: eq?.work_center || '' 
+    }));
   };
 
   const handleToolSelect = (e) => {
@@ -150,7 +154,6 @@ const ToolChangeForm = () => {
     setFormData(prev => ({
       ...prev,
       new_tool_id: id,
-      tool_type: tool?.tool_type || '',
       insert_type: tool?.insert_type || '',
       insert_grade: tool?.insert_grade || ''
     }));
@@ -171,10 +174,10 @@ const ToolChangeForm = () => {
     try {
       console.log('🚀 Starting form submission...');
       
-      // Validate required fields
+      // Validate required fields - updated to exclude supervisor and tool_type
       const requiredFields = [
         'date', 'time', 'shift', 'operator', 'work_center', 
-        'equipment_number', 'operation', 'part_number', 'new_tool_id', 'change_reason'
+        'equipment_number', 'operation', 'part_number', 'change_reason'
       ];
       
       const missingFields = requiredFields.filter(field => !formData[field]);
@@ -191,9 +194,8 @@ const ToolChangeForm = () => {
         time: formData.time,
         shift: formData.shift ? Number(formData.shift) : null,
         
-        // People
+        // People - supervisor removed
         operator: formData.operator || null,
-        supervisor: formData.supervisor || null,
         
         // Equipment and operation
         work_center: formData.work_center || null,
@@ -202,11 +204,12 @@ const ToolChangeForm = () => {
         part_number: formData.part_number || null,
         job_number: formData.job_number || null,
         
-        // Tool information
-        tool_type: formData.tool_type || null,
+        // Tool information - tool_type removed, new fields added
         old_tool_id: formData.old_tool_id || null,
         new_tool_id: formData.new_tool_id || null,
         tool_position: formData.tool_position || null,
+        first_rougher: formData.first_rougher || null,     // New field
+        finish_tool: formData.finish_tool || null,         // New field
         insert_type: formData.insert_type || null,
         insert_grade: formData.insert_grade || null,
         
@@ -236,16 +239,16 @@ const ToolChangeForm = () => {
         setFormData({
           ...getCurrentDateTime(),
           operator: '',
-          supervisor: '',
           work_center: '',
           equipment_number: '',
           operation: '',
           part_number: '',
           job_number: '',
-          tool_type: '',
           old_tool_id: '',
           new_tool_id: '',
           tool_position: '',
+          first_rougher: '',
+          finish_tool: '',
           insert_type: '',
           insert_grade: '',
           change_reason: '',
@@ -260,104 +263,59 @@ const ToolChangeForm = () => {
       }, 3000);
       
     } catch (error) {
-      console.error('💥 Error submitting form:', error);
+      console.error('❌ Error saving tool change:', error);
       setSubmitStatus('error');
-      
-      // Log specific error details for debugging
-      if (error.message) {
-        console.error('Error message:', error.message);
-      }
-      if (error.details) {
-        console.error('Error details:', error.details);
-      }
-      if (error.hint) {
-        console.error('Error hint:', error.hint);
-      }
-      
-      // Clear error status after 5 seconds
-      setTimeout(() => setSubmitStatus(null), 5000);
     } finally {
       setIsSubmitting(false);
     }
   };
 
-  // Real equipment numbers from Spuncast facility
-
-  const changeReasons = ['Tool Wear', 'Tool Breakage', 'Poor Surface Finish', 'Dimensional Issues', 'Chatter/Vibration', 'Setup Change', 'Scheduled Replacement', 'Programming Change', 'Quality Issue', 'Other'];
-  const shifts = [1, 2, 3];
-  const operations = ['Rough Turn', 'Finish Turn', 'Boring', 'Facing', 'Threading', 'Drilling', 'Milling', 'Grooving', 'Parting', 'Chamfering', 'Contouring', 'Deep Hole Drilling'];
-
-  // Real operators from Spuncast production data
-  const operators = [
-    'Escobar, Ronald', 'Payne, Steven R.', 'Eggleston, Laura A', 'Anderson, Norah',
-    'Jedrzejewski, Cody', 'Kersten, Paul', 'Gonzalez, Antonio', 'Ongino, Jasper',
-    'Arellano, Manuel G.', 'Medina, Laura', 'Averill, Michael', 'Maule, Thomas P.',
-    'Ruble, Andrew H', 'Contreras, Andres', 'Narvaez, Cristian', 'Fuller, Jordan',
-    'Lucht, Joel R.', 'Fuiten, Keri A'
-  ];
-
   return (
-    <div className="max-w-6xl mx-auto p-6 bg-white">
-      {/* Spuncast Header */}
-      <div className="mb-8 text-center">
-        <div className="flex items-center justify-center mb-4">
-          <div className="w-12 h-12 bg-red-600 rounded-full flex items-center justify-center mr-4">
-            <span className="text-white font-bold text-xl">S</span>
-          </div>
-          <div>
-            <h1 className="text-3xl font-bold text-blue-900">SPUNCAST</h1>
-            <p className="text-sm text-gray-600">W4493 Shine Road, Watertown, WI 53098</p>
-          </div>
+    <div className="min-h-screen bg-gray-50 py-8">
+      <div className="max-w-4xl mx-auto bg-white rounded-xl shadow-lg p-8">
+        
+        {/* Header */}
+        <div className="text-center mb-8">
+          <h1 className="text-3xl font-bold text-gray-900 mb-2">🔧 Tool Change Tracking</h1>
+          <p className="text-gray-600">Manufacturing Optimization System</p>
+          <Link href="/" className="text-blue-600 hover:text-blue-800 text-sm">
+            ← Back to Dashboard
+          </Link>
         </div>
-        <h2 className="text-2xl font-bold text-gray-900 mb-2">Tool Change Performance Tracking</h2>
-        <p className="text-gray-600">Optimize throughput, quality, and equipment effectiveness</p>
-      </div>
 
-      {submitStatus && (
-        <div className={`mb-6 p-4 rounded-lg flex items-center space-x-2 ${
-          submitStatus === 'success' 
-            ? 'bg-green-50 border border-green-200 text-green-800' 
-            : 'bg-red-50 border border-red-200 text-red-800'
-        }`}>
-          {submitStatus === 'success' ? <CheckCircle size={20} /> : <AlertCircle size={20} />}
-          <span>
-            {submitStatus === 'success' 
-              ? 'Tool change saved to database! Data available for analysis.' 
-              : 'Error saving to database. Please check required fields and try again.'}
-          </span>
-        </div>
-      )}
+        {/* Success/Error Messages */}
+        {submitStatus === 'success' && (
+          <div className="mb-6 p-4 bg-green-100 border border-green-400 text-green-700 rounded-lg flex items-center">
+            <CheckCircle className="mr-2" size={20} />
+            Tool change recorded successfully!
+          </div>
+        )}
+        
+        {submitStatus === 'error' && (
+          <div className="mb-6 p-4 bg-red-100 border border-red-400 text-red-700 rounded-lg">
+            Error saving tool change. Please try again.
+          </div>
+        )}
 
-      <div className="space-y-8">
-        {/* Basic Information */}
-        <div className="bg-blue-50 p-6 rounded-lg">
+        {/* Basic Information - Supervisor removed */}
+        <div className="bg-blue-50 p-6 rounded-lg mb-6">
           <h2 className="text-xl font-semibold text-blue-900 mb-4 flex items-center">
-            <Clock className="mr-2" size={20} />
+            <Calendar className="mr-2" size={20} />
             Basic Information
           </h2>
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 Date <span className="text-red-500">*</span>
               </label>
-              <div className="flex items-center space-x-2">
-                <input
-                  type="date"
-                  name="date"
-                  value={formData.date}
-                  onChange={handleInputChange}
-                  required
-                  className="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                />
-                <button
-                  type="button"
-                  onClick={refreshTimestamp}
-                  className="p-2 text-blue-600 hover:bg-blue-50 rounded-md transition-colors"
-                  title="Refresh to current time"
-                >
-                  <RefreshCw size={16} />
-                </button>
-              </div>
+              <input
+                type="date"
+                name="date"
+                value={formData.date}
+                onChange={handleInputChange}
+                required
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -388,6 +346,9 @@ const ToolChangeForm = () => {
                 ))}
               </select>
             </div>
+          </div>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 Operator <span className="text-red-500">*</span>
@@ -405,22 +366,12 @@ const ToolChangeForm = () => {
                 ))}
               </select>
             </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Supervisor</label>
-              <input
-                type="text"
-                name="supervisor"
-                value={formData.supervisor}
-                onChange={handleInputChange}
-                placeholder="Supervisor name"
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
-            </div>
+            {/* Supervisor field removed per requirements */}
           </div>
         </div>
 
         {/* Equipment & Operation Information */}
-        <div className="bg-green-50 p-6 rounded-lg">
+        <div className="bg-green-50 p-6 rounded-lg mb-6">
           <h2 className="text-xl font-semibold text-green-900 mb-4 flex items-center">
             <Wrench className="mr-2" size={20} />
             Equipment & Operation Details
@@ -433,6 +384,7 @@ const ToolChangeForm = () => {
                 name="work_center"
                 value={formData.work_center}
                 onChange={handleInputChange}
+                placeholder="e.g., WC100"
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
               />
             </div>
@@ -449,8 +401,8 @@ const ToolChangeForm = () => {
               >
                 <option value="">Select equipment</option>
                 {equipmentList.map(eq => (
-                  <option key={eq.number} value={eq.number}>
-                    {eq.display_name || `${eq.number} - ${eq.description}`}
+                  <option key={eq.equipment_number} value={eq.equipment_number}>
+                    {eq.equipment_number} - {eq.description}
                   </option>
                 ))}
               </select>
@@ -459,19 +411,19 @@ const ToolChangeForm = () => {
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 Operation <span className="text-red-500">*</span>
               </label>
-              <select
+              <input
+                type="text"
                 name="operation"
                 value={formData.operation}
                 onChange={handleInputChange}
+                placeholder="e.g., Rough Turn, Finish Mill"
                 required
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
-              >
-                <option value="">Select operation</option>
-                {operations.map(op => (
-                  <option key={op} value={op}>{op}</option>
-                ))}
-              </select>
+              />
             </div>
+          </div>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 Part Number <span className="text-red-500">*</span>
@@ -481,8 +433,8 @@ const ToolChangeForm = () => {
                 name="part_number"
                 value={formData.part_number}
                 onChange={handleInputChange}
+                placeholder="e.g., CAT123-456"
                 required
-                placeholder="Part being machined"
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
               />
             </div>
@@ -493,30 +445,20 @@ const ToolChangeForm = () => {
                 name="job_number"
                 value={formData.job_number}
                 onChange={handleInputChange}
-                placeholder="Work order number"
+                placeholder="e.g., JOB-2025-001"
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
               />
             </div>
           </div>
         </div>
 
-        {/* Tool Information */}
-        <div className="bg-purple-50 p-6 rounded-lg">
+        {/* Tool Information - Updated with new insert fields */}
+        <div className="bg-purple-50 p-6 rounded-lg mb-6">
           <h2 className="text-xl font-semibold text-purple-900 mb-4 flex items-center">
             <Package className="mr-2" size={20} />
             Tool Information
           </h2>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Tool Type</label>
-              <input
-                type="text"
-                name="tool_type"
-                value={formData.tool_type}
-                onChange={handleInputChange}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500"
-              />
-            </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Old Tool ID</label>
               <input
@@ -524,19 +466,16 @@ const ToolChangeForm = () => {
                 name="old_tool_id"
                 value={formData.old_tool_id}
                 onChange={handleInputChange}
-                placeholder="Tool being removed"
+                placeholder="e.g., T01-OLD"
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500"
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                New Tool ID <span className="text-red-500">*</span>
-              </label>
+              <label className="block text-sm font-medium text-gray-700 mb-1">New Tool ID</label>
               <select
                 name="new_tool_id"
                 value={formData.new_tool_id}
                 onChange={handleToolSelect}
-                required
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500"
               >
                 <option value="">Select tool</option>
@@ -558,6 +497,47 @@ const ToolChangeForm = () => {
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500"
               />
             </div>
+          </div>
+          
+          {/* New insert fields per requirements */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                1st Rougher <span className="text-red-500">*</span>
+              </label>
+              <select
+                name="first_rougher"
+                value={formData.first_rougher}
+                onChange={handleInputChange}
+                required
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500"
+              >
+                <option value="">Select rougher insert</option>
+                {rougherInserts.map(insert => (
+                  <option key={insert} value={insert}>{insert}</option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Finish Tool <span className="text-red-500">*</span>
+              </label>
+              <select
+                name="finish_tool"
+                value={formData.finish_tool}
+                onChange={handleInputChange}
+                required
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500"
+              >
+                <option value="">Select finish insert</option>
+                {finishInserts.map(insert => (
+                  <option key={insert} value={insert}>{insert}</option>
+                ))}
+              </select>
+            </div>
+          </div>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Insert Type</label>
               <input
@@ -581,11 +561,11 @@ const ToolChangeForm = () => {
           </div>
         </div>
 
-        {/* Performance & Quality Impact */}
-        <div className="bg-yellow-50 p-6 rounded-lg">
+        {/* Change Reason & Performance */}
+        <div className="bg-yellow-50 p-6 rounded-lg mb-6">
           <h2 className="text-xl font-semibold text-yellow-900 mb-4 flex items-center">
             <TrendingUp className="mr-2" size={20} />
-            Performance & Quality Impact
+            Change Details & Performance Impact
           </h2>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
@@ -605,33 +585,92 @@ const ToolChangeForm = () => {
                 ))}
               </select>
             </div>
-            <div className="flex items-end">
-              <Link href="/additional-data" className="text-blue-600 underline">
-                Provide additional performance data
-              </Link>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Old Tool Condition</label>
+              <select
+                name="old_tool_condition"
+                value={formData.old_tool_condition}
+                onChange={handleInputChange}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-yellow-500"
+              >
+                <option value="">Select condition</option>
+                {toolConditions.map(condition => (
+                  <option key={condition} value={condition}>{condition}</option>
+                ))}
+              </select>
+            </div>
+          </div>
+          
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Pieces Produced</label>
+              <input
+                type="number"
+                name="pieces_produced"
+                value={formData.pieces_produced}
+                onChange={handleInputChange}
+                min="0"
+                placeholder="0"
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-yellow-500"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Cycle Time Before (sec)</label>
+              <input
+                type="number"
+                name="cycle_time_before"
+                value={formData.cycle_time_before}
+                onChange={handleInputChange}
+                step="0.01"
+                min="0"
+                placeholder="0.00"
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-yellow-500"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Cycle Time After (sec)</label>
+              <input
+                type="number"
+                name="cycle_time_after"
+                value={formData.cycle_time_after}
+                onChange={handleInputChange}
+                step="0.01"
+                min="0"
+                placeholder="0.00"
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-yellow-500"
+              />
+            </div>
+          </div>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Downtime (minutes)</label>
+              <input
+                type="number"
+                name="downtime_minutes"
+                value={formData.downtime_minutes}
+                onChange={handleInputChange}
+                min="0"
+                placeholder="0"
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-yellow-500"
+              />
             </div>
           </div>
         </div>
 
-
-        {/* Additional Notes */}
-        <div className="bg-red-50 p-6 rounded-lg">
-          <h2 className="text-xl font-semibold text-red-900 mb-4 flex items-center">
-            <CheckCircle className="mr-2" size={20} />
-            Notes
-          </h2>
-          <div className="grid grid-cols-1 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Additional Notes & Observations</label>
-              <textarea
-                name="notes"
-                value={formData.notes}
-                onChange={handleInputChange}
-                rows="3"
-                placeholder="Any additional observations, machine conditions, setup issues, recommendations for improvement, etc."
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-red-500"
-              />
-            </div>
+        {/* Notes */}
+        <div className="bg-gray-50 p-6 rounded-lg mb-6">
+          <h2 className="text-xl font-semibold text-gray-900 mb-4">Additional Notes</h2>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Notes</label>
+            <textarea
+              name="notes"
+              value={formData.notes}
+              onChange={handleInputChange}
+              rows="4"
+              placeholder="Additional comments about the tool change..."
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-red-500"
+            />
           </div>
         </div>
 
@@ -642,19 +681,24 @@ const ToolChangeForm = () => {
             onClick={() => setFormData({
               ...getCurrentDateTime(),
               operator: '',
-              supervisor: '',
               work_center: '',
               equipment_number: '',
               operation: '',
               part_number: '',
               job_number: '',
-              tool_type: '',
               old_tool_id: '',
               new_tool_id: '',
               tool_position: '',
+              first_rougher: '',
+              finish_tool: '',
               insert_type: '',
               insert_grade: '',
               change_reason: '',
+              old_tool_condition: '',
+              pieces_produced: '',
+              cycle_time_before: '',
+              cycle_time_after: '',
+              downtime_minutes: '',
               notes: ''
             })}
             className="px-6 py-3 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors"
@@ -674,6 +718,9 @@ const ToolChangeForm = () => {
       </div>
     </div>
   );
+};
+
+export default ToolChangeForm;
 };
 
 export default ToolChangeForm;
