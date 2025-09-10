@@ -1,5 +1,5 @@
-// components/ToolChangeForm.js - Enhanced with 2024 Process Diagnostics
-import React, { useState } from 'react';
+// components/ToolChangeForm.js - Original form with integrated insert dropdowns
+import React, { useState, useEffect } from 'react';
 import {
   Clock,
   User,
@@ -68,8 +68,43 @@ const ToolChangeForm = () => {
     notes: ''
   });
 
+  // State for approved inserts
+  const [availableInserts, setAvailableInserts] = useState({
+    roughing: [],
+    finishing: []
+  });
+
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitStatus, setSubmitStatus] = useState(null);
+  const [insertsLoading, setInsertsLoading] = useState(true);
+
+  // Fetch approved inserts on component mount
+  useEffect(() => {
+    fetchApprovedInserts();
+  }, []);
+
+  const fetchApprovedInserts = async () => {
+    try {
+      setInsertsLoading(true);
+      
+      // Fetch roughing inserts
+      const roughingResponse = await fetch('/api/inserts/allowed?operation=ROUGHING');
+      const roughingData = await roughingResponse.json();
+      
+      // Fetch finishing inserts
+      const finishingResponse = await fetch('/api/inserts/allowed?operation=FINISHING');
+      const finishingData = await finishingResponse.json();
+      
+      setAvailableInserts({
+        roughing: roughingData,
+        finishing: finishingData
+      });
+    } catch (err) {
+      console.error('Error fetching inserts:', err);
+    } finally {
+      setInsertsLoading(false);
+    }
+  };
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -77,6 +112,20 @@ const ToolChangeForm = () => {
       ...prev,
       [name]: value
     }));
+  };
+
+  // Helper functions for insert dropdowns
+  const getStockStatus = (insert) => {
+    if (!insert || !insert.quantity_on_hand || insert.quantity_on_hand <= 0) return 'out-of-stock';
+    if (insert.quantity_on_hand <= insert.min_quantity) return 'low-stock';
+    return 'in-stock';
+  };
+
+  const formatInsertOption = (insert) => {
+    const stockStatus = getStockStatus(insert);
+    const stockText = stockStatus === 'out-of-stock' ? ' (OUT OF STOCK)' : 
+                     stockStatus === 'low-stock' ? ' (LOW STOCK)' : '';
+    return `${insert.full_insert_id} - ${insert.description}${stockText}`;
   };
 
   // Calculate material risk score based on diagnostic inputs
@@ -244,6 +293,18 @@ const ToolChangeForm = () => {
       setIsSubmitting(false);
     }
   };
+
+  // Show loading if inserts are still being fetched
+  if (insertsLoading) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <RefreshCw className="animate-spin h-8 w-8 text-blue-600 mx-auto mb-4" />
+          <p className="text-gray-600">Loading approved inserts...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -588,7 +649,7 @@ const ToolChangeForm = () => {
           })()}
         </div>
 
-        {/* Tool Change Details */}
+        {/* Tool Change Details - MODIFIED WITH DROPDOWNS */}
         <div className="bg-red-50 p-6 rounded-lg mb-6">
           <h2 className="text-xl font-semibold text-red-900 mb-4 flex items-center">
             <Package className="mr-2" size={20} />
@@ -600,30 +661,48 @@ const ToolChangeForm = () => {
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 Old First Rougher <span className="text-red-500">*</span>
               </label>
-              <input
-                type="text"
+              <select
                 name="old_first_rougher"
                 value={formData.old_first_rougher}
                 onChange={handleInputChange}
                 required
-                placeholder="Insert removed"
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-red-500"
-              />
+              >
+                <option value="">Select current insert</option>
+                {availableInserts.roughing.map(insert => (
+                  <option 
+                    key={insert.full_insert_id} 
+                    value={insert.full_insert_id}
+                    disabled={getStockStatus(insert) === 'out-of-stock'}
+                  >
+                    {formatInsertOption(insert)}
+                  </option>
+                ))}
+              </select>
             </div>
 
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 New First Rougher <span className="text-red-500">*</span>
               </label>
-              <input
-                type="text"
+              <select
                 name="new_first_rougher"
                 value={formData.new_first_rougher}
                 onChange={handleInputChange}
                 required
-                placeholder="Insert installed"
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-red-500"
-              />
+              >
+                <option value="">Select replacement insert</option>
+                {availableInserts.roughing.map(insert => (
+                  <option 
+                    key={insert.full_insert_id} 
+                    value={insert.full_insert_id}
+                    disabled={getStockStatus(insert) === 'out-of-stock'}
+                  >
+                    {formatInsertOption(insert)}
+                  </option>
+                ))}
+              </select>
             </div>
 
             <div>
@@ -650,30 +729,48 @@ const ToolChangeForm = () => {
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 Old Finish Tool <span className="text-red-500">*</span>
               </label>
-              <input
-                type="text"
+              <select
                 name="old_finish_tool"
                 value={formData.old_finish_tool}
                 onChange={handleInputChange}
                 required
-                placeholder="Insert removed"
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-red-500"
-              />
+              >
+                <option value="">Select current insert</option>
+                {availableInserts.finishing.map(insert => (
+                  <option 
+                    key={insert.full_insert_id} 
+                    value={insert.full_insert_id}
+                    disabled={getStockStatus(insert) === 'out-of-stock'}
+                  >
+                    {formatInsertOption(insert)}
+                  </option>
+                ))}
+              </select>
             </div>
 
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 New Finish Tool <span className="text-red-500">*</span>
               </label>
-              <input
-                type="text"
+                              <select
                 name="new_finish_tool"
                 value={formData.new_finish_tool}
                 onChange={handleInputChange}
                 required
-                placeholder="Insert installed"
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-red-500"
-              />
+              >
+                <option value="">Select replacement insert</option>
+                {availableInserts.finishing.map(insert => (
+                  <option 
+                    key={insert.full_insert_id} 
+                    value={insert.full_insert_id}
+                    disabled={getStockStatus(insert) === 'out-of-stock'}
+                  >
+                    {formatInsertOption(insert)}
+                  </option>
+                ))}
+              </select>
             </div>
 
             <div>
@@ -769,5 +866,1239 @@ const ToolChangeForm = () => {
   );
 };
 
-export default ToolChangeForm;
+export default ToolChangeForm;         {/* Basic Information */}
+        <div className="bg-blue-50 p-6 rounded-lg mb-6">
+          <h2 className="text-xl font-semibold text-blue-900 mb-4 flex items-center">
+            <Clock className="mr-2" size={20} />
+            Basic Information
+          </h2>
 
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Material Appearance
+              </label>
+              <select
+                name="material_appearance"
+                value={formData.material_appearance}
+                onChange={handleInputChange}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500"
+              >
+                <option value="Normal">Normal</option>
+                <option value="Discolored">Discolored</option>
+                <option value="Rough Surface">Rough Surface</option>
+                <option value="Porosity Visible">Porosity Visible</option>
+                <option value="Hard Spots">Hard Spots</option>
+                <option value="Inclusions">Inclusions Visible</option>
+              </select>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Insert Failure Mode
+              </label>
+              <select
+                name="insert_failure_mode"
+                value={formData.insert_failure_mode}
+                onChange={handleInputChange}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500"
+              >
+                <option value="">Select failure mode</option>
+                <option value="Edge Chipping">Edge Chipping</option>
+                <option value="Crater Wear">Crater Wear</option>
+                <option value="Sudden Fracture">Sudden Fracture</option>
+                <option value="Premature Dulling">Premature Dulling</option>
+                <option value="Built-up Edge">Built-up Edge</option>
+                <option value="Thermal Cracking">Thermal Cracking</option>
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Operator Observations
+              </label>
+              <textarea
+                name="operator_observations"
+                value={formData.operator_observations}
+                onChange={handleInputChange}
+                rows="2"
+                placeholder="Material felt different? Unusual sounds? Surface finish issues?"
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500"
+              />
+            </div>
+          </div>
+
+          {/* Risk indicator for 2024 material */}
+          {formData.heat_number?.startsWith('24') && (
+            <div className="mt-4 p-3 bg-yellow-100 border border-yellow-300 rounded-md">
+              <div className="flex items-center">
+                <AlertTriangle className="h-5 w-5 text-yellow-600 mr-2" />
+                <span className="text-sm font-medium text-yellow-800">
+                  2024 Material Detected - Enhanced tracking enabled for process correlation
+                </span>
+              </div>
+            </div>
+          )}
+
+          {/* Show calculated risk score if high */}
+          {(() => {
+            const riskScore = calculateMaterialRiskScore();
+            if (riskScore >= 5) {
+              return (
+                <div className="mt-4 p-3 bg-red-100 border border-red-300 rounded-md">
+                  <div className="flex items-center">
+                    <AlertTriangle className="h-5 w-5 text-red-600 mr-2" />
+                    <span className="text-sm font-medium text-red-800">
+                      High Risk Material (Score: {riskScore}/10) - Consider enhanced monitoring
+                    </span>
+                  </div>
+                </div>
+              );
+            }
+            return null;
+          })()}
+        </div>
+
+        {/* Tool Change Details - RESTRICTED INSERT SELECTION */}
+        <div className="bg-red-50 p-6 rounded-lg mb-6">
+          <h2 className="text-xl font-semibold text-red-900 mb-4 flex items-center">
+            <Package className="mr-2" size={20} />
+            Tool Change Details - Approved Inserts Only
+          </h2>
+
+          {/* First Rougher Section */}
+          <div className="mb-6">
+            <h3 className="text-lg font-medium text-red-800 mb-3">First Rougher Tools</h3>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Old First Rougher <span className="text-red-500">*</span>
+                </label>
+                <select
+                  name="old_first_rougher"
+                  value={formData.old_first_rougher}
+                  onChange={handleInputChange}
+                  required
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-red-500"
+                >
+                  <option value="">Select current insert</option>
+                  {availableInserts.roughing.map(insert => (
+                    <option 
+                      key={insert.full_insert_id} 
+                      value={insert.full_insert_id}
+                      disabled={getStockStatus(insert) === 'out-of-stock'}
+                    >
+                      {formatInsertOption(insert)}
+                    </option>
+                  ))}
+                </select>
+                {/* Display insert details */}
+                {formData.old_first_rougher && (
+                  <div className="mt-2 p-2 bg-blue-50 rounded text-sm">
+                    {(() => {
+                      const insert = getInsertDetails(formData.old_first_rougher, 'ROUGHING');
+                      return insert ? (
+                        <div className="flex items-center gap-2">
+                          <CheckCircle className={`w-4 h-4 ${getStockStatus(insert) === 'in-stock' ? 'text-green-500' : 'text-yellow-500'}`} />
+                          <span>Stock: {insert.quantity_on_hand} | Cost: ${insert.unit_cost}/ea</span>
+                        </div>
+                      ) : null;
+                    })()}
+                  </div>
+                )}
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  New First Rougher <span className="text-red-500">*</span>
+                </label>
+                <select
+                  name="new_first_rougher"
+                  value={formData.new_first_rougher}
+                  onChange={handleInputChange}
+                  required
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-red-500"
+                >
+                  <option value="">Select replacement insert</option>
+                  {availableInserts.roughing.map(insert => (
+                    <option 
+                      key={insert.full_insert_id} 
+                      value={insert.full_insert_id}
+                      disabled={getStockStatus(insert) === 'out-of-stock'}
+                    >
+                      {formatInsertOption(insert)}
+                    </option>
+                  ))}
+                </select>
+                {formData.new_first_rougher && (
+                  <div className="mt-2 p-2 bg-blue-50 rounded text-sm">
+                    {(() => {
+                      const insert = getInsertDetails(formData.new_first_rougher, 'ROUGHING');
+                      return insert ? (
+                        <div className="flex items-center gap-2">
+                          <CheckCircle className={`w-4 h-4 ${getStockStatus(insert) === 'in-stock' ? 'text-green-500' : 'text-yellow-500'}`} />
+                          <span>Stock: {insert.quantity_on_hand} | Cost: ${insert.unit_cost}/ea</span>
+                        </div>
+                      ) : null;
+                    })()}
+                  </div>
+                )}
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  First Rougher Action <span className="text-red-500">*</span>
+                </label>
+                <select
+                  name="first_rougher_action"
+                  value={formData.first_rougher_action}
+                  onChange={handleInputChange}
+                  required
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-red-500"
+                >
+                  <option value="">Select action</option>
+                  <option value="new">New Insert</option>
+                  <option value="turn">Turn Insert</option>
+                  <option value="none">No Change</option>
+                </select>
+              </div>
+            </div>
+          </div>
+
+          {/* Finish Tool Section */}
+          <div>
+            <h3 className="text-lg font-medium text-red-800 mb-3">Finish Tools</h3>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Old Finish Tool <span className="text-red-500">*</span>
+                </label>
+                <select
+                  name="old_finish_tool"
+                  value={formData.old_finish_tool}
+                  onChange={handleInputChange}
+                  required
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-red-500"
+                >
+                  <option value="">Select current insert</option>
+                  {availableInserts.finishing.map(insert => (
+                    <option 
+                      key={insert.full_insert_id} 
+                      value={insert.full_insert_id}
+                      disabled={getStockStatus(insert) === 'out-of-stock'}
+                    >
+                      {formatInsertOption(insert)}
+                    </option>
+                  ))}
+                </select>
+                {formData.old_finish_tool && (
+                  <div className="mt-2 p-2 bg-blue-50 rounded text-sm">
+                    {(() => {
+                      const insert = getInsertDetails(formData.old_finish_tool, 'FINISHING');
+                      return insert ? (
+                        <div className="flex items-center gap-2">
+                          <CheckCircle className={`w-4 h-4 ${getStockStatus(insert) === 'in-stock' ? 'text-green-500' : 'text-yellow-500'}`} />
+                          <span>Stock: {insert.quantity_on_hand} | Cost: ${insert.unit_cost}/ea</span>
+                        </div>
+                      ) : null;
+                    })()}
+                  </div>
+                )}
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  New Finish Tool <span className="text-red-500">*</span>
+                </label>
+                <select
+                  name="new_finish_tool"
+                  value={formData.new_finish_tool}
+                  onChange={handleInputChange}
+                  required
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-red-500"
+                >
+                  <option value="">Select replacement insert</option>
+                  {availableInserts.finishing.map(insert => (
+                    <option 
+                      key={insert.full_insert_id} 
+                      value={insert.full_insert_id}
+                      disabled={getStockStatus(insert) === 'out-of-stock'}
+                    >
+                      {formatInsertOption(insert)}
+                    </option>
+                  ))}
+                </select>
+                {formData.new_finish_tool && (
+                  <div className="mt-2 p-2 bg-blue-50 rounded text-sm">
+                    {(() => {
+                      const insert = getInsertDetails(formData.new_finish_tool, 'FINISHING');
+                      return insert ? (
+                        <div className="flex items-center gap-2">
+                          <CheckCircle className={`w-4 h-4 ${getStockStatus(insert) === 'in-stock' ? 'text-green-500' : 'text-yellow-500'}`} />
+                          <span>Stock: {insert.quantity_on_hand} | Cost: ${insert.unit_cost}/ea</span>
+                        </div>
+                      ) : null;
+                    })()}
+                  </div>
+                )}
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Finish Tool Action <span className="text-red-500">*</span>
+                </label>
+                <select
+                  name="finish_tool_action"
+                  value={formData.finish_tool_action}
+                  onChange={handleInputChange}
+                  required
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-red-500"
+                >
+                  <option value="">Select action</option>
+                  <option value="new">New Insert</option>
+                  <option value="turn">Turn Insert</option>
+                  <option value="none">No Change</option>
+                </select>
+              </div>
+            </div>
+          </div>
+
+          {/* Available Inserts Summary */}
+          <div className="mt-6 p-4 bg-gray-100 rounded-lg">
+            <h4 className="font-medium text-gray-800 mb-2">Available Approved Inserts:</h4>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+              <div>
+                <strong className="text-blue-600">Roughing Options:</strong>
+                {availableInserts.roughing.map(insert => (
+                  <div key={insert.full_insert_id} className="ml-2 flex items-center gap-1">
+                    <CheckCircle className={`w-3 h-3 ${getStockStatus(insert) === 'in-stock' ? 'text-green-500' : 'text-yellow-500'}`} />
+                    <span>{insert.full_insert_id} - {insert.description}</span>
+                  </div>
+                ))}
+              </div>
+              <div>
+                <strong className="text-purple-600">Finishing Options:</strong>
+                {availableInserts.finishing.map(insert => (
+                  <div key={insert.full_insert_id} className="ml-2 flex items-center gap-1">
+                    <CheckCircle className={`w-3 h-3 ${getStockStatus(insert) === 'in-stock' ? 'text-green-500' : 'text-yellow-500'}`} />
+                    <span>{insert.full_insert_id} - {insert.description}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Change Reason */}
+        <div className="bg-gray-50 p-6 rounded-lg mb-6">
+          <h2 className="text-xl font-semibold text-gray-900 mb-4">
+            Change Reason & Notes
+          </h2>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Change Reason <span className="text-red-500">*</span>
+              </label>
+              <select
+                name="change_reason"
+                value={formData.change_reason}
+                onChange={handleInputChange}
+                required
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-gray-500"
+              >
+                <option value="">Select reason</option>
+                <option value="Normal Wear">Normal Wear</option>
+                <option value="Tool Breakage">Tool Breakage</option>
+                <option value="Chipped Edge">Chipped Edge</option>
+                <option value="Poor Finish">Poor Finish</option>
+                <option value="Size Issues">Size Issues</option>
+                <option value="Scheduled Change">Scheduled Change</option>
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Additional Notes
+              </label>
+              <textarea
+                name="notes"
+                value={formData.notes}
+                onChange={handleInputChange}
+                rows="3"
+                placeholder="Any additional observations or context..."
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-gray-500"
+              />
+            </div>
+          </div>
+        </div>
+
+        {/* Submit Button */}
+        <div className="flex justify-center">
+          <button
+            onClick={handleSubmit}
+            disabled={isSubmitting}
+            className={`flex items-center space-x-2 px-8 py-3 rounded-lg font-medium text-white transition-colors ${
+              isSubmitting
+                ? 'bg-gray-400 cursor-not-allowed'
+                : 'bg-blue-600 hover:bg-blue-700 focus:ring-2 focus:ring-blue-500'
+            }`}
+          >
+            {isSubmitting ? (
+              <>
+                <RefreshCw className="animate-spin" size={20} />
+                <span>Saving Diagnostic Data...</span>
+              </>
+            ) : (
+              <>
+                <Save size={20} />
+                <span>Save Tool Change with Diagnostics & Insert Validation</span>
+              </>
+            )}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default ToolChangeForm;">
+                Date <span className="text-red-500">*</span>
+              </label>
+              <input
+                type="date"
+                name="date"
+                value={formData.date}
+                onChange={handleInputChange}
+                required
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Time <span className="text-red-500">*</span>
+              </label>
+              <input
+                type="time"
+                name="time"
+                value={formData.time}
+                onChange={handleInputChange}
+                required
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Shift <span className="text-red-500">*</span>
+              </label>
+              <select
+                name="shift"
+                value={formData.shift}
+                onChange={handleInputChange}
+                required
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              >
+                <option value="">Select Shift</option>
+                <option value="1">1st Shift (6 AM - 2 PM)</option>
+                <option value="2">2nd Shift (2 PM - 10 PM)</option>
+                <option value="3">3rd Shift (10 PM - 6 AM)</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        {/* Operator Information */}
+        <div className="bg-green-50 p-6 rounded-lg mb-6">
+          <h2 className="text-xl font-semibold text-green-900 mb-4 flex items-center">
+            <User className="mr-2" size={20} />
+            Operator Information
+          </h2>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Operator Name <span className="text-red-500">*</span>
+              </label>
+              <input
+                type="text"
+                name="operator"
+                value={formData.operator}
+                onChange={handleInputChange}
+                required
+                placeholder="First Last"
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Employee ID <span className="text-red-500">*</span>
+              </label>
+              <input
+                type="text"
+                name="operator_id"
+                value={formData.operator_id}
+                onChange={handleInputChange}
+                required
+                placeholder="Badge number or employee ID"
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
+              />
+            </div>
+          </div>
+        </div>
+
+        {/* Equipment Information */}
+        <div className="bg-purple-50 p-6 rounded-lg mb-6">
+          <h2 className="text-xl font-semibold text-purple-900 mb-4 flex items-center">
+            <Wrench className="mr-2" size={20} />
+            Equipment & Operation
+          </h2>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Work Center <span className="text-red-500">*</span>
+              </label>
+              <input
+                type="text"
+                name="work_center"
+                value={formData.work_center}
+                onChange={handleInputChange}
+                required
+                placeholder="e.g., 1770, 1689, etc."
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Equipment Number <span className="text-red-500">*</span>
+              </label>
+              <input
+                type="text"
+                name="equipment_number"
+                value={formData.equipment_number}
+                onChange={handleInputChange}
+                required
+                placeholder="Machine ID"
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Operation <span className="text-red-500">*</span>
+              </label>
+              <select
+                name="operation"
+                value={formData.operation}
+                onChange={handleInputChange}
+                required
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500"
+              >
+                <option value="Bore">Bore</option>
+                <option value="Turn">Turn</option>
+                <option value="Face">Face</option>
+                <option value="Thread">Thread</option>
+                <option value="Drill">Drill</option>
+                <option value="Mill">Mill</option>
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Part Number <span className="text-red-500">*</span>
+              </label>
+              <input
+                type="text"
+                name="part_number"
+                value={formData.part_number}
+                onChange={handleInputChange}
+                required
+                placeholder="Part being machined"
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Job Number</label>
+              <input
+                type="text"
+                name="job_number"
+                value={formData.job_number}
+                onChange={handleInputChange}
+                placeholder="Work order number"
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500"
+              />
+            </div>
+          </div>
+        </div>
+
+        {/* Diagnostic Information Section */}
+        <div className="bg-orange-50 p-6 rounded-lg mb-6">
+          <h2 className="text-xl font-semibold text-orange-900 mb-4 flex items-center">
+            <TrendingUp className="mr-2" size={20} />
+            Material Diagnostic Information
+          </h2>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Heat Number <span className="text-red-500">*</span>
+              </label>
+              <input
+                type="text"
+                name="heat_number"
+                value={formData.heat_number}
+                onChange={handleInputChange}
+                placeholder="e.g., 24S0125, 25A0920"
+                pattern="[0-9]{2}[A-Z][0-9]{4}"
+                title="Format: 24S0125 (YY + Letter + 4 digits)"
+                required
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500"
+              />
+              <p className="text-xs text-gray-500 mt-1">
+                Critical for 2024 process correlation analysis
+              </p>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1import React, { useState, useEffect } from 'react';
+import { AlertTriangle, CheckCircle, Wrench } from 'lucide-react';
+
+const ToolChangeForm = () => {
+  const [formData, setFormData] = useState({
+    oldFirstRougher: '',
+    newFirstRougher: '',
+    firstRougherAction: '',
+    oldFinishTool: '',
+    newFinishTool: '',
+    finishToolAction: '',
+    changeReason: '',
+    additionalNotes: ''
+  });
+
+  const [availableInserts, setAvailableInserts] = useState({
+    roughing: [],
+    finishing: []
+  });
+
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  // Fetch approved inserts for each operation type
+  useEffect(() => {
+    fetchInserts();
+  }, []);
+
+  const fetchInserts = async () => {
+    try {
+      setLoading(true);
+      
+      // Fetch roughing inserts
+      const roughingResponse = await fetch('/api/inserts/allowed?operation=ROUGHING');
+      const roughingData = await roughingResponse.json();
+      
+      // Fetch finishing inserts
+      const finishingResponse = await fetch('/api/inserts/allowed?operation=FINISHING');
+      const finishingData = await finishingResponse.json();
+      
+      setAvailableInserts({
+        roughing: roughingData,
+        finishing: finishingData
+      });
+      
+      setError(null);
+    } catch (err) {
+      setError('Failed to load approved inserts');
+      console.error('Error fetching inserts:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleInputChange = (field, value) => {
+    setFormData(prev => ({
+      ...prev,
+      [field]: value
+    }));
+  };
+
+  const handleSubmit = async () => {
+    // Validate required fields
+    const requiredFields = ['changeReason'];
+    const missingFields = requiredFields.filter(field => !formData[field]);
+    
+    if (missingFields.length > 0) {
+      alert(`Please fill in required fields: ${missingFields.join(', ')}`);
+      return;
+    }
+
+    try {
+      // Submit tool change data
+      const submitData = {
+        ...formData,
+        timestamp: new Date().toISOString(),
+        // Add operation types for validation
+        operation_types: {
+          roughing: formData.newFirstRougher ? 'ROUGHING' : null,
+          finishing: formData.newFinishTool ? 'FINISHING' : null
+        }
+      };
+
+      const response = await fetch('/api/tool-changes', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(submitData)
+      });
+
+      if (response.ok) {
+        alert('Tool change recorded successfully!');
+        // Reset form
+        setFormData({
+          oldFirstRougher: '',
+          newFirstRougher: '',
+          firstRougherAction: '',
+          oldFinishTool: '',
+          newFinishTool: '',
+          finishToolAction: '',
+          changeReason: '',
+          additionalNotes: ''
+        });
+      } else {
+        const errorData = await response.json();
+        alert(`Error: ${errorData.message || 'Failed to record tool change'}`);
+      }
+    } catch (err) {
+      console.error('Submit error:', err);
+      alert('Failed to submit tool change');
+    }
+  };
+
+  const getStockStatus = (insert) => {
+    if (!insert.quantity_on_hand || insert.quantity_on_hand <= 0) return 'out-of-stock';
+    if (insert.quantity_on_hand <= insert.min_quantity) return 'low-stock';
+    return 'in-stock';
+  };
+
+  const getStockIcon = (insert) => {
+    const status = getStockStatus(insert);
+    switch (status) {
+      case 'out-of-stock':
+        return <AlertTriangle className="w-4 h-4 text-red-500" />;
+      case 'low-stock':
+        return <AlertTriangle className="w-4 h-4 text-yellow-500" />;
+      default:
+        return <CheckCircle className="w-4 h-4 text-green-500" />;
+    }
+  };
+
+  const formatInsertOption = (insert) => {
+    const stockStatus = getStockStatus(insert);
+    const stockText = stockStatus === 'out-of-stock' ? ' (OUT OF STOCK)' : 
+                     stockStatus === 'low-stock' ? ' (LOW STOCK)' : '';
+    return `${insert.full_insert_id} - ${insert.description}${stockText}`;
+  };
+
+  const changeReasons = [
+    'Normal Wear',
+    'Tool Breakage', 
+    'Chipped Edge',
+    'Poor Finish',
+    'Size Issues',
+    'Scheduled Change'
+  ];
+
+  const toolActions = [
+    'New Insert',
+    'Turn Insert', 
+    'No Change'
+  ];
+
+  if (loading) {
+    return (
+      <div className="tool-change-form loading">
+        <div className="loading-spinner"></div>
+        <p>Loading approved inserts...</p>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="tool-change-form error">
+        <AlertTriangle className="error-icon" />
+        <p>{error}</p>
+        <button onClick={fetchInserts} className="retry-button">
+          Retry
+        </button>
+      </div>
+    );
+  }
+
+  return (
+    <div className="tool-change-form">
+      <div className="form-header">
+        <Wrench className="header-icon" />
+        <h2>Tool Change Details</h2>
+      </div>
+
+      <div className="form-container">
+        {/* First Rougher Section */}
+        <div className="form-section">
+          <h3>First Rougher</h3>
+          
+          <div className="form-group">
+            <label htmlFor="oldFirstRougher">Old First Rougher *</label>
+            <select
+              id="oldFirstRougher"
+              value={formData.oldFirstRougher}
+              onChange={(e) => handleInputChange('oldFirstRougher', e.target.value)}
+              className="form-select"
+            >
+              <option value="">Select current insert</option>
+              {availableInserts.roughing.map(insert => (
+                <option 
+                  key={insert.full_insert_id} 
+                  value={insert.full_insert_id}
+                  disabled={getStockStatus(insert) === 'out-of-stock'}
+                >
+                  {formatInsertOption(insert)}
+                </option>
+              ))}
+            </select>
+            <div className="insert-info">
+              {formData.oldFirstRougher && (
+                <div className="selected-insert-details">
+                  {(() => {
+                    const selectedInsert = availableInserts.roughing.find(
+                      i => i.full_insert_id === formData.oldFirstRougher
+                    );
+                    return selectedInsert ? (
+                      <div className="insert-details">
+                        {getStockIcon(selectedInsert)}
+                        <span>Stock: {selectedInsert.quantity_on_hand}</span>
+                        <span>Cost: ${selectedInsert.unit_cost}/ea</span>
+                      </div>
+                    ) : null;
+                  })()}
+                </div>
+              )}
+            </div>
+          </div>
+
+          <div className="form-group">
+            <label htmlFor="newFirstRougher">New First Rougher *</label>
+            <select
+              id="newFirstRougher"
+              value={formData.newFirstRougher}
+              onChange={(e) => handleInputChange('newFirstRougher', e.target.value)}
+              className="form-select"
+            >
+              <option value="">Select replacement insert</option>
+              {availableInserts.roughing.map(insert => (
+                <option 
+                  key={insert.full_insert_id} 
+                  value={insert.full_insert_id}
+                  disabled={getStockStatus(insert) === 'out-of-stock'}
+                >
+                  {formatInsertOption(insert)}
+                </option>
+              ))}
+            </select>
+            <div className="insert-info">
+              {formData.newFirstRougher && (
+                <div className="selected-insert-details">
+                  {(() => {
+                    const selectedInsert = availableInserts.roughing.find(
+                      i => i.full_insert_id === formData.newFirstRougher
+                    );
+                    return selectedInsert ? (
+                      <div className="insert-details">
+                        {getStockIcon(selectedInsert)}
+                        <span>Stock: {selectedInsert.quantity_on_hand}</span>
+                        <span>Cost: ${selectedInsert.unit_cost}/ea</span>
+                      </div>
+                    ) : null;
+                  })()}
+                </div>
+              )}
+            </div>
+          </div>
+
+          <div className="form-group">
+            <label htmlFor="firstRougherAction">First Rougher Action *</label>
+            <select
+              id="firstRougherAction"
+              value={formData.firstRougherAction}
+              onChange={(e) => handleInputChange('firstRougherAction', e.target.value)}
+              className="form-select"
+            >
+              <option value="">Select action</option>
+              {toolActions.map(action => (
+                <option key={action} value={action}>
+                  {action}
+                </option>
+              ))}
+            </select>
+          </div>
+        </div>
+
+        {/* Finish Tool Section */}
+        <div className="form-section">
+          <h3>Finish Tool</h3>
+          
+          <div className="form-group">
+            <label htmlFor="oldFinishTool">Old Finish Tool *</label>
+            <select
+              id="oldFinishTool"
+              value={formData.oldFinishTool}
+              onChange={(e) => handleInputChange('oldFinishTool', e.target.value)}
+              className="form-select"
+            >
+              <option value="">Select current insert</option>
+              {availableInserts.finishing.map(insert => (
+                <option 
+                  key={insert.full_insert_id} 
+                  value={insert.full_insert_id}
+                  disabled={getStockStatus(insert) === 'out-of-stock'}
+                >
+                  {formatInsertOption(insert)}
+                </option>
+              ))}
+            </select>
+            <div className="insert-info">
+              {formData.oldFinishTool && (
+                <div className="selected-insert-details">
+                  {(() => {
+                    const selectedInsert = availableInserts.finishing.find(
+                      i => i.full_insert_id === formData.oldFinishTool
+                    );
+                    return selectedInsert ? (
+                      <div className="insert-details">
+                        {getStockIcon(selectedInsert)}
+                        <span>Stock: {selectedInsert.quantity_on_hand}</span>
+                        <span>Cost: ${selectedInsert.unit_cost}/ea</span>
+                      </div>
+                    ) : null;
+                  })()}
+                </div>
+              )}
+            </div>
+          </div>
+
+          <div className="form-group">
+            <label htmlFor="newFinishTool">New Finish Tool *</label>
+            <select
+              id="newFinishTool"
+              value={formData.newFinishTool}
+              onChange={(e) => handleInputChange('newFinishTool', e.target.value)}
+              className="form-select"
+            >
+              <option value="">Select replacement insert</option>
+              {availableInserts.finishing.map(insert => (
+                <option 
+                  key={insert.full_insert_id} 
+                  value={insert.full_insert_id}
+                  disabled={getStockStatus(insert) === 'out-of-stock'}
+                >
+                  {formatInsertOption(insert)}
+                </option>
+              ))}
+            </select>
+            <div className="insert-info">
+              {formData.newFinishTool && (
+                <div className="selected-insert-details">
+                  {(() => {
+                    const selectedInsert = availableInserts.finishing.find(
+                      i => i.full_insert_id === formData.newFinishTool
+                    );
+                    return selectedInsert ? (
+                      <div className="insert-details">
+                        {getStockIcon(selectedInsert)}
+                        <span>Stock: {selectedInsert.quantity_on_hand}</span>
+                        <span>Cost: ${selectedInsert.unit_cost}/ea</span>
+                      </div>
+                    ) : null;
+                  })()}
+                </div>
+              )}
+            </div>
+          </div>
+
+          <div className="form-group">
+            <label htmlFor="finishToolAction">Finish Tool Action *</label>
+            <select
+              id="finishToolAction"
+              value={formData.finishToolAction}
+              onChange={(e) => handleInputChange('finishToolAction', e.target.value)}
+              className="form-select"
+            >
+              <option value="">Select action</option>
+              {toolActions.map(action => (
+                <option key={action} value={action}>
+                  {action}
+                </option>
+              ))}
+            </select>
+          </div>
+        </div>
+
+        {/* Change Reason & Notes Section */}
+        <div className="form-section">
+          <h3>Change Reason & Notes</h3>
+          
+          <div className="form-group">
+            <label htmlFor="changeReason">Change Reason *</label>
+            <select
+              id="changeReason"
+              value={formData.changeReason}
+              onChange={(e) => handleInputChange('changeReason', e.target.value)}
+              className="form-select"
+              required
+            >
+              <option value="">Select reason</option>
+              {changeReasons.map(reason => (
+                <option key={reason} value={reason}>
+                  {reason}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div className="form-group">
+            <label htmlFor="additionalNotes">Additional Notes</label>
+            <textarea
+              id="additionalNotes"
+              value={formData.additionalNotes}
+              onChange={(e) => handleInputChange('additionalNotes', e.target.value)}
+              className="form-textarea"
+              rows="4"
+              placeholder="Enter any additional notes about the tool change..."
+            />
+          </div>
+        </div>
+
+        {/* Summary Section */}
+        {(formData.newFirstRougher || formData.newFinishTool) && (
+          <div className="form-section summary-section">
+            <h3>Change Summary</h3>
+            <div className="change-summary">
+              {formData.newFirstRougher && (
+                <div className="summary-item">
+                  <strong>Roughing Change:</strong> {formData.oldFirstRougher || 'Not specified'} → {formData.newFirstRougher}
+                </div>
+              )}
+              {formData.newFinishTool && (
+                <div className="summary-item">
+                  <strong>Finishing Change:</strong> {formData.oldFinishTool || 'Not specified'} → {formData.newFinishTool}
+                </div>
+              )}
+              {formData.changeReason && (
+                <div className="summary-item">
+                  <strong>Reason:</strong> {formData.changeReason}
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        <button onClick={handleSubmit} className="submit-button">
+          Record Tool Change
+        </button>
+      </div>
+
+      <style jsx>{`
+        .tool-change-form {
+          max-width: 800px;
+          margin: 0 auto;
+          padding: 2rem;
+          background: white;
+          border-radius: 8px;
+          box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        .form-header {
+          display: flex;
+          align-items: center;
+          gap: 0.5rem;
+          margin-bottom: 2rem;
+          padding-bottom: 1rem;
+          border-bottom: 2px solid #e5e7eb;
+        }
+
+        .header-icon {
+          width: 24px;
+          height: 24px;
+          color: #3b82f6;
+        }
+
+        .form-section {
+          margin-bottom: 2rem;
+          padding: 1.5rem;
+          border: 1px solid #e5e7eb;
+          border-radius: 6px;
+          background: #f9fafb;
+        }
+
+        .form-section h3 {
+          margin: 0 0 1rem 0;
+          color: #374151;
+          font-size: 1.1rem;
+          font-weight: 600;
+        }
+
+        .form-group {
+          margin-bottom: 1.5rem;
+        }
+
+        .form-group label {
+          display: block;
+          margin-bottom: 0.5rem;
+          font-weight: 500;
+          color: #374151;
+        }
+
+        .form-select, .form-textarea {
+          width: 100%;
+          padding: 0.75rem;
+          border: 1px solid #d1d5db;
+          border-radius: 4px;
+          font-size: 1rem;
+          background: white;
+          transition: border-color 0.2s;
+        }
+
+        .form-select:focus, .form-textarea:focus {
+          outline: none;
+          border-color: #3b82f6;
+          box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+        }
+
+        .form-select option:disabled {
+          color: #9ca3af;
+          background: #f3f4f6;
+        }
+
+        .insert-info {
+          margin-top: 0.5rem;
+        }
+
+        .selected-insert-details {
+          padding: 0.5rem;
+          background: #f0f9ff;
+          border-radius: 4px;
+          border-left: 3px solid #3b82f6;
+        }
+
+        .insert-details {
+          display: flex;
+          align-items: center;
+          gap: 1rem;
+          font-size: 0.875rem;
+          color: #374151;
+        }
+
+        .summary-section {
+          background: #eff6ff;
+          border-color: #3b82f6;
+        }
+
+        .change-summary {
+          space-y: 0.5rem;
+        }
+
+        .summary-item {
+          padding: 0.5rem 0;
+          border-bottom: 1px solid #e0f2fe;
+        }
+
+        .summary-item:last-child {
+          border-bottom: none;
+        }
+
+        .submit-button {
+          width: 100%;
+          padding: 1rem 2rem;
+          background: #3b82f6;
+          color: white;
+          border: none;
+          border-radius: 6px;
+          font-size: 1.1rem;
+          font-weight: 600;
+          cursor: pointer;
+          transition: background-color 0.2s;
+        }
+
+        .submit-button:hover {
+          background: #2563eb;
+        }
+
+        .submit-button:disabled {
+          background: #9ca3af;
+          cursor: not-allowed;
+        }
+
+        .loading, .error {
+          text-align: center;
+          padding: 3rem;
+        }
+
+        .loading-spinner {
+          width: 40px;
+          height: 40px;
+          border: 4px solid #e5e7eb;
+          border-left: 4px solid #3b82f6;
+          border-radius: 50%;
+          animation: spin 1s linear infinite;
+          margin: 0 auto 1rem;
+        }
+
+        @keyframes spin {
+          0% { transform: rotate(0deg); }
+          100% { transform: rotate(360deg); }
+        }
+
+        .error-icon {
+          width: 48px;
+          height: 48px;
+          color: #ef4444;
+          margin: 0 auto 1rem;
+        }
+
+        .retry-button {
+          background: #3b82f6;
+          color: white;
+          border: none;
+          padding: 0.5rem 1rem;
+          border-radius: 4px;
+          cursor: pointer;
+          margin-top: 1rem;
+        }
+
+        @media (max-width: 768px) {
+          .tool-change-form {
+            padding: 1rem;
+          }
+          
+          .form-section {
+            padding: 1rem;
+          }
+          
+          .insert-details {
+            flex-wrap: wrap;
+            gap: 0.5rem;
+          }
+        }
+      `}</style>
+    </div>
+  );
+};
+
+export default ToolChangeForm;
