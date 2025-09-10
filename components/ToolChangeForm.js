@@ -1,8 +1,8 @@
 // components/ToolChangeForm.js - Updated per requirements
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { Calendar, Clock, User, Wrench, Package, CheckCircle, Save, TrendingUp, RefreshCw } from 'lucide-react';
-import { getEquipment, getToolInventory, addToolChange } from '../lib/supabase';
+import { Calendar, Wrench, Package, CheckCircle, Save, TrendingUp } from 'lucide-react';
+import { getEquipment, getToolInventory, getOperators, addToolChange } from '../lib/supabase';
 
 const ToolChangeForm = () => {
   // Auto-populate timestamp when form loads
@@ -26,6 +26,9 @@ const ToolChangeForm = () => {
     // Basic Info - Auto-populated
     ...getCurrentDateTime(),
     operator: '',
+    operator_employee_id: '',
+    operator_clock_number: '',
+    operator_id: null,
 
     // Machine/Operation Info
     work_center: '',
@@ -55,16 +58,12 @@ const ToolChangeForm = () => {
 
   const [toolInventory, setToolInventory] = useState([]);
   const [equipmentList, setEquipmentList] = useState([]);
+  const [operators, setOperators] = useState([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitStatus, setSubmitStatus] = useState(null);
 
   // Predefined lists
   const shifts = [1, 2, 3];
-  const operators = [
-    'John Smith', 'Jane Doe', 'Mike Johnson', 'Sarah Wilson', 
-    'Tom Rodriguez', 'Lisa Chen', 'Dave Brown', 'Amy Garcia',
-    'Chris Lee', 'Maria Gonzalez'
-  ];
 
   // Insert options for dropdowns - organized by type
   const rougherInserts = [
@@ -125,12 +124,20 @@ const ToolChangeForm = () => {
   useEffect(() => {
     const loadData = async () => {
       try {
-        const [tools, equipment] = await Promise.all([
+        const [tools, equipment, operatorsList] = await Promise.all([
           getToolInventory(),
-          getEquipment()
+          getEquipment(),
+          getOperators()
         ]);
         setToolInventory(tools || []);
         setEquipmentList(equipment || []);
+        setOperators(operatorsList || []);
+
+        console.log('✅ Loaded data:', {
+          tools: tools?.length || 0,
+          equipment: equipment?.length || 0,
+          operators: operatorsList?.length || 0
+        });
       } catch (error) {
         console.error('Error loading reference data:', error);
       }
@@ -167,6 +174,71 @@ const ToolChangeForm = () => {
     }));
   };
 
+  // Update the operator selection handler
+  const handleOperatorChange = (e) => {
+    const selectedOperatorId = e.target.value;
+    const selectedOperator = operators.find(op => op.id.toString() === selectedOperatorId);
+
+    if (selectedOperator) {
+      setFormData(prev => ({
+        ...prev,
+        operator: selectedOperator.full_name,
+        operator_employee_id: selectedOperator.employee_id,
+        operator_clock_number: selectedOperator.clock_number,
+        operator_id: selectedOperator.id
+      }));
+
+      console.log('Selected operator:', selectedOperator);
+    } else {
+      setFormData(prev => ({
+        ...prev,
+        operator: '',
+        operator_employee_id: '',
+        operator_clock_number: '',
+        operator_id: null
+      }));
+    }
+  };
+
+  const operatorDropdownJSX = (
+    <div className="mt-4">
+      <label className="block text-sm font-medium text-gray-700 mb-1">
+        Operator <span className="text-red-500">*</span>
+      </label>
+      <select
+        name="operator"
+        value={formData.operator_id || ''}
+        onChange={handleOperatorChange}
+        required
+        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+      >
+        <option value="">Select operator...</option>
+        {operators.map(operator => (
+          <option key={operator.id} value={operator.id}>
+            {operator.full_name} ({operator.employee_id}) - {operator.skill_level}
+            {operator.cat536_6763_experience && ' ⭐ CAT536 Certified'}
+          </option>
+        ))}
+      </select>
+
+      {formData.operator_id && (
+        <div className="mt-2 p-3 bg-blue-50 rounded-md text-sm">
+          <div className="grid grid-cols-2 gap-2">
+            <span><strong>Clock #:</strong> {formData.operator_clock_number}</span>
+            <span><strong>Employee ID:</strong> {formData.operator_employee_id}</span>
+            {operators.find(op => op.id === formData.operator_id)?.cat536_6763_experience && (
+              <span className="col-span-2 text-green-600">
+                <strong>CAT536-6763 Experience:</strong> {
+                  operators.find(op => op.id === formData.operator_id)?.cat536_6763_pieces_produced || 0
+                } pieces produced
+              </span>
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+
   const handleSubmit = async () => {
     setIsSubmitting(true);
     setSubmitStatus(null);
@@ -174,10 +246,11 @@ const ToolChangeForm = () => {
     try {
       console.log('🚀 Starting form submission...');
       
-      // Validate required fields - updated to exclude supervisor and tool_type
+      // Updated required fields validation
       const requiredFields = [
-        'date', 'time', 'shift', 'operator', 'work_center', 
-        'equipment_number', 'operation', 'part_number', 'change_reason'
+        'date', 'time', 'shift', 'operator_id', 'work_center',
+        'equipment_number', 'operation', 'part_number', 'first_rougher',
+        'finish_tool', 'change_reason'
       ];
       
       const missingFields = requiredFields.filter(field => !formData[field]);
@@ -187,32 +260,35 @@ const ToolChangeForm = () => {
         throw new Error(`Missing required fields: ${missingFields.join(', ')}`);
       }
 
-      // Prepare data for database (clean up empty strings and format properly)
+      // Prepare data for database with operator linking
       const cleanedData = {
         // Date and time fields
         date: formData.date,
         time: formData.time,
         shift: formData.shift ? Number(formData.shift) : null,
-        
-        // People - supervisor removed
+
+        // Operator information - now linked to database
         operator: formData.operator || null,
-        
+        operator_employee_id: formData.operator_employee_id || null,
+        operator_clock_number: formData.operator_clock_number || null,
+        operator_id: formData.operator_id || null,
+
         // Equipment and operation
         work_center: formData.work_center || null,
         equipment_number: formData.equipment_number || null,
         operation: formData.operation || null,
         part_number: formData.part_number || null,
         job_number: formData.job_number || null,
-        
-        // Tool information - tool_type removed, new fields added
+
+        // Tool information
         old_tool_id: formData.old_tool_id || null,
         new_tool_id: formData.new_tool_id || null,
         tool_position: formData.tool_position || null,
-        first_rougher: formData.first_rougher || null,     // New field
-        finish_tool: formData.finish_tool || null,         // New field
+        first_rougher: formData.first_rougher || null,
+        finish_tool: formData.finish_tool || null,
         insert_type: formData.insert_type || null,
         insert_grade: formData.insert_grade || null,
-        
+
         // Change details
         change_reason: formData.change_reason || null,
         old_tool_condition: formData.old_tool_condition || null,
@@ -221,8 +297,8 @@ const ToolChangeForm = () => {
         cycle_time_after: formData.cycle_time_after ? Number(formData.cycle_time_after) : null,
         downtime_minutes: formData.downtime_minutes ? Number(formData.downtime_minutes) : null,
         notes: formData.notes || null,
-        
-        // Add timestamp
+
+        // Timestamp
         created_at: new Date().toISOString()
       };
 
@@ -239,6 +315,9 @@ const ToolChangeForm = () => {
         setFormData({
           ...getCurrentDateTime(),
           operator: '',
+          operator_employee_id: '',
+          operator_clock_number: '',
+          operator_id: null,
           work_center: '',
           equipment_number: '',
           operation: '',
@@ -348,26 +427,7 @@ const ToolChangeForm = () => {
             </div>
           </div>
           
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Operator <span className="text-red-500">*</span>
-              </label>
-              <select
-                name="operator"
-                value={formData.operator}
-                onChange={handleInputChange}
-                required
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-              >
-                <option value="">Select operator</option>
-                {operators.map(op => (
-                  <option key={op} value={op}>{op}</option>
-                ))}
-              </select>
-            </div>
-            {/* Supervisor field removed per requirements */}
-          </div>
+          {operatorDropdownJSX}
         </div>
 
         {/* Equipment & Operation Information */}
@@ -681,6 +741,9 @@ const ToolChangeForm = () => {
             onClick={() => setFormData({
               ...getCurrentDateTime(),
               operator: '',
+              operator_employee_id: '',
+              operator_clock_number: '',
+              operator_id: null,
               work_center: '',
               equipment_number: '',
               operation: '',
