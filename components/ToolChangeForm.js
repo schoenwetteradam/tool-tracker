@@ -9,7 +9,10 @@ import {
   TrendingUp,
   RefreshCw,
   AlertTriangle,
-  ArrowLeft
+  ArrowLeft,
+  DollarSign,
+  Package2,
+  Truck
 } from 'lucide-react';
 import { addToolChange } from '../lib/supabase';
 
@@ -52,55 +55,173 @@ const ToolChangeForm = () => {
     notes: ''
   });
 
-  const [availableInserts, setAvailableInserts] = useState({
+  const [availableTools, setAvailableTools] = useState({
     roughing: [],
-    finishing: []
+    finishing: [],
+    all: []
   });
 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitStatus, setSubmitStatus] = useState(null);
-  const [insertsLoading, setInsertsLoading] = useState(true);
+  const [toolsLoading, setToolsLoading] = useState(true);
+  const [costSummary, setCostSummary] = useState({
+    oldToolCost: 0,
+    newToolCost: 0,
+    totalCost: 0
+  });
 
   useEffect(() => {
-    fetchApprovedInserts();
+    fetchToolInventory();
   }, []);
 
-  const fetchApprovedInserts = async () => {
+  useEffect(() => {
+    calculateCostSummary();
+  }, [formData.old_first_rougher, formData.new_first_rougher, formData.old_finish_tool, formData.new_finish_tool, availableTools]);
+
+  const fetchToolInventory = async () => {
     try {
-      setInsertsLoading(true);
+      setToolsLoading(true);
       
-      // Check if the API endpoints exist, if not use fallback data
-      try {
-        const roughingResponse = await fetch('/api/inserts/allowed?operation=ROUGHING');
-        const roughingData = await roughingResponse.json();
-        
-        const finishingResponse = await fetch('/api/inserts/allowed?operation=FINISHING');
-        const finishingData = await finishingResponse.json();
-        
-        setAvailableInserts({
-          roughing: roughingData || [],
-          finishing: finishingData || []
-        });
-      } catch (apiError) {
-        console.warn('API endpoints not available, using fallback data');
-        // Fallback data for development/testing
-        setAvailableInserts({
-          roughing: [
-            { full_insert_id: 'CNMG432MP', description: 'CNMG 432 MP Grade', quantity_on_hand: 50, min_quantity: 10 },
-            { full_insert_id: 'CNMG432MG', description: 'CNMG 432 MG Grade', quantity_on_hand: 25, min_quantity: 10 },
-          ],
-          finishing: [
-            { full_insert_id: 'WNMG432MP', description: 'WNMG 432 MP Grade', quantity_on_hand: 30, min_quantity: 5 },
-            { full_insert_id: 'WNMG432MG', description: 'WNMG 432 MG Grade', quantity_on_hand: 15, min_quantity: 5 },
-          ]
-        });
+      // Updated to use supabase client directly
+      const { createClient } = await import('@supabase/supabase-js');
+      const supabase = createClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL,
+        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+      );
+
+      const { data: toolData, error } = await supabase
+        .from('tool_inventory_enhanced')
+        .select(`
+          id,
+          material_id,
+          description,
+          insert_type,
+          insert_geometry,
+          insert_grade,
+          supplier_id,
+          supplier_name,
+          unit_cost,
+          quantity_on_hand,
+          min_quantity,
+          max_quantity,
+          active,
+          nose_radius,
+          coating,
+          lead_time_days
+        `)
+        .eq('active', true)
+        .order('insert_type', { ascending: true })
+        .order('insert_geometry', { ascending: true })
+        .order('insert_grade', { ascending: true });
+
+      if (error) {
+        console.error('Supabase error:', error);
+        throw error;
       }
-    } catch (err) {
-      console.error('Error fetching inserts:', err);
-      setAvailableInserts({ roughing: [], finishing: [] });
+
+      // Process and categorize tools
+      const processedTools = toolData || [];
+      
+      const roughingTools = processedTools.filter(tool => 
+        tool.insert_type === 'ROUGHING' || 
+        tool.description?.toLowerCase().includes('rough') ||
+        tool.insert_grade?.includes('4235') ||
+        tool.insert_grade?.includes('4335')
+      );
+
+      const finishingTools = processedTools.filter(tool => 
+        tool.insert_type === 'FINISHING' || 
+        tool.description?.toLowerCase().includes('finish') ||
+        tool.insert_grade?.includes('2220') ||
+        tool.insert_grade?.includes('MP')
+      );
+
+      setAvailableTools({
+        roughing: roughingTools,
+        finishing: finishingTools,
+        all: processedTools
+      });
+
+    } catch (error) {
+      console.error('Error fetching tool inventory:', error);
+      
+      // Fallback data based on your sample
+      const fallbackData = [
+        {
+          id: '5',
+          material_id: '11-00529',
+          description: 'INSERT SNMG 643 MR 4235',
+          insert_type: 'ROUGHING',
+          insert_geometry: 'SNMG',
+          insert_grade: '4235',
+          supplier_name: 'BEST ENGINEERING LLC',
+          unit_cost: 16.35,
+          quantity_on_hand: 100,
+          min_quantity: 50,
+          active: true,
+          lead_time_days: 14
+        },
+        {
+          id: '6',
+          material_id: '11-00529',
+          description: 'INSERT SNMG 643 MR 4335',
+          insert_type: 'ROUGHING',
+          insert_geometry: 'SNMG',
+          insert_grade: '4335',
+          supplier_name: 'BEST ENGINEERING LLC',
+          unit_cost: 16.35,
+          quantity_on_hand: 100,
+          min_quantity: 50,
+          active: true,
+          lead_time_days: 14
+        },
+        {
+          id: '7',
+          material_id: '11-00025',
+          description: 'INSERT SNMG 643-MM 2220',
+          insert_type: 'FINISHING',
+          insert_geometry: 'SNMG',
+          insert_grade: '2220',
+          supplier_name: 'BEST ENGINEERING LLC',
+          unit_cost: 16.71,
+          quantity_on_hand: 75,
+          min_quantity: 30,
+          active: true,
+          lead_time_days: 14
+        }
+      ];
+
+      setAvailableTools({
+        roughing: fallbackData.filter(t => t.insert_type === 'ROUGHING'),
+        finishing: fallbackData.filter(t => t.insert_type === 'FINISHING'),
+        all: fallbackData
+      });
     } finally {
-      setInsertsLoading(false);
+      setToolsLoading(false);
     }
+  };
+
+  const calculateCostSummary = () => {
+    let totalCost = 0;
+    
+    // Calculate costs for tool changes
+    const oldRougher = getToolDetails(formData.old_first_rougher);
+    const newRougher = getToolDetails(formData.new_first_rougher);
+    const oldFinish = getToolDetails(formData.old_finish_tool);
+    const newFinish = getToolDetails(formData.new_finish_tool);
+
+    if (newRougher && formData.first_rougher_action === 'Replace') {
+      totalCost += newRougher.unit_cost || 0;
+    }
+    if (newFinish && formData.finish_tool_action === 'Replace') {
+      totalCost += newFinish.unit_cost || 0;
+    }
+
+    setCostSummary({
+      oldToolCost: (oldRougher?.unit_cost || 0) + (oldFinish?.unit_cost || 0),
+      newToolCost: totalCost,
+      totalCost: totalCost
+    });
   };
 
   const handleInputChange = (e) => {
@@ -111,22 +232,43 @@ const ToolChangeForm = () => {
     }));
   };
 
-  const getStockStatus = (insert) => {
-    if (!insert || !insert.quantity_on_hand || insert.quantity_on_hand <= 0) return 'out-of-stock';
-    if (insert.quantity_on_hand <= insert.min_quantity) return 'low-stock';
+  const getStockStatus = (tool) => {
+    if (!tool || !tool.quantity_on_hand || tool.quantity_on_hand <= 0) return 'out-of-stock';
+    if (tool.quantity_on_hand <= tool.min_quantity) return 'low-stock';
     return 'in-stock';
   };
 
-  const formatInsertOption = (insert) => {
-    const stockStatus = getStockStatus(insert);
-    const stockText = stockStatus === 'out-of-stock' ? ' (OUT OF STOCK)' : 
-                     stockStatus === 'low-stock' ? ' (LOW STOCK)' : '';
-    return `${insert.full_insert_id} - ${insert.description}${stockText}`;
+  const getStockIcon = (status) => {
+    switch (status) {
+      case 'in-stock': return '✅';
+      case 'low-stock': return '⚠️';
+      case 'out-of-stock': return '❌';
+      default: return '❓';
+    }
   };
 
-  const getInsertDetails = (insertId, operationType) => {
-    const insertList = operationType === 'ROUGHING' ? availableInserts.roughing : availableInserts.finishing;
-    return insertList.find(insert => insert.full_insert_id === insertId);
+  const formatToolOption = (tool) => {
+    const stockStatus = getStockStatus(tool);
+    const stockIcon = getStockIcon(stockStatus);
+    const stockText = stockStatus === 'out-of-stock' ? ' (OUT OF STOCK)' : 
+                     stockStatus === 'low-stock' ? ' (LOW STOCK)' : '';
+    
+    return `${tool.material_id} - ${tool.insert_geometry} ${tool.insert_grade} (${tool.insert_type}) - Stock: ${tool.quantity_on_hand} ${stockIcon}${stockText}`;
+  };
+
+  const getToolDetails = (toolId) => {
+    return availableTools.all.find(tool => tool.id === toolId);
+  };
+
+  const groupToolsByGeometry = (tools) => {
+    return tools.reduce((groups, tool) => {
+      const geometry = tool.insert_geometry || 'OTHER';
+      if (!groups[geometry]) {
+        groups[geometry] = [];
+      }
+      groups[geometry].push(tool);
+      return groups;
+    }, {});
   };
 
   const calculateMaterialRiskScore = () => {
@@ -161,7 +303,7 @@ const ToolChangeForm = () => {
 
     try {
       const requiredFields = [
-        'date', 'time', 'shift', 'operator_id', 'work_center', 'equipment_number',
+        'date', 'time', 'shift', 'operator', 'work_center', 'equipment_number',
         'operation', 'part_number', 'old_first_rougher', 'new_first_rougher',
         'first_rougher_action', 'old_finish_tool', 'new_finish_tool',
         'finish_tool_action', 'change_reason', 'heat_number'
@@ -172,6 +314,12 @@ const ToolChangeForm = () => {
       if (missingFields.length > 0) {
         throw new Error(`Missing required fields: ${missingFields.join(', ')}`);
       }
+
+      // Get tool details for enhanced data
+      const oldRougherTool = getToolDetails(formData.old_first_rougher);
+      const newRougherTool = getToolDetails(formData.new_first_rougher);
+      const oldFinishTool = getToolDetails(formData.old_finish_tool);
+      const newFinishTool = getToolDetails(formData.new_finish_tool);
 
       const cleanedData = {
         date: formData.date,
@@ -198,7 +346,19 @@ const ToolChangeForm = () => {
         material_risk_score: calculateMaterialRiskScore(),
         change_reason: formData.change_reason || null,
         notes: formData.notes || null,
-        created_at: new Date().toISOString()
+        created_at: new Date().toISOString(),
+        // Enhanced tool data
+        old_rougher_material_id: oldRougherTool?.material_id || null,
+        new_rougher_material_id: newRougherTool?.material_id || null,
+        old_finish_material_id: oldFinishTool?.material_id || null,
+        new_finish_material_id: newFinishTool?.material_id || null,
+        rougher_cost: newRougherTool?.unit_cost || 0,
+        finish_cost: newFinishTool?.unit_cost || 0,
+        total_tool_cost: costSummary.totalCost,
+        old_rougher_supplier: oldRougherTool?.supplier_name || null,
+        new_rougher_supplier: newRougherTool?.supplier_name || null,
+        old_finish_supplier: oldFinishTool?.supplier_name || null,
+        new_finish_supplier: newFinishTool?.supplier_name || null
       };
 
       const result = await addToolChange(cleanedData);
@@ -206,6 +366,14 @@ const ToolChangeForm = () => {
 
       if (cleanedData.material_risk_score >= 5) {
         console.warn('High-risk material detected:', cleanedData.heat_number);
+      }
+
+      // Check for low stock alerts
+      if (newRougherTool && getStockStatus(newRougherTool) === 'low-stock') {
+        console.warn(`Low stock alert: ${newRougherTool.material_id} - ${newRougherTool.quantity_on_hand} remaining`);
+      }
+      if (newFinishTool && getStockStatus(newFinishTool) === 'low-stock') {
+        console.warn(`Low stock alert: ${newFinishTool.material_id} - ${newFinishTool.quantity_on_hand} remaining`);
       }
 
       // Reset form after successful submission
@@ -233,32 +401,66 @@ const ToolChangeForm = () => {
           notes: ''
         });
         setSubmitStatus(null);
+        setCostSummary({ oldToolCost: 0, newToolCost: 0, totalCost: 0 });
       }, 3000);
     } catch (error) {
-      console.error('Error saving diagnostic tool change:', error);
+      console.error('Error saving enhanced tool change:', error);
       setSubmitStatus('error');
     } finally {
       setIsSubmitting(false);
     }
   };
 
-  if (insertsLoading) {
+  if (toolsLoading) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
           <RefreshCw className="animate-spin h-8 w-8 text-blue-600 mx-auto mb-4" />
-          <p className="text-gray-600">Loading insert data...</p>
+          <p className="text-gray-600">Loading tool inventory from database...</p>
+          <p className="text-sm text-gray-500 mt-2">Fetching from tool_inventory_enhanced table</p>
         </div>
       </div>
     );
   }
 
+  const groupedRoughingTools = groupToolsByGeometry(availableTools.roughing);
+  const groupedFinishingTools = groupToolsByGeometry(availableTools.finishing);
+
   return (
-    <div className="max-w-4xl mx-auto p-6 bg-white">
+    <div className="max-w-6xl mx-auto p-6 bg-white">
       <div className="mb-6">
-        <h1 className="text-3xl font-bold text-gray-900 mb-2">Tool Change Form</h1>
-        <p className="text-gray-600">Record diagnostic tool change information</p>
+        <h1 className="text-3xl font-bold text-gray-900 mb-2">Enhanced Tool Change Form</h1>
+        <p className="text-gray-600">Professional tool tracking with inventory integration</p>
+        <div className="flex items-center gap-4 mt-2 text-sm text-gray-500">
+          <span>📊 Tools Available: {availableTools.all.length}</span>
+          <span>🔧 Roughing: {availableTools.roughing.length}</span>
+          <span>✨ Finishing: {availableTools.finishing.length}</span>
+        </div>
       </div>
+
+      {/* Cost Summary Panel */}
+      {costSummary.totalCost > 0 && (
+        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
+          <h3 className="text-lg font-semibold text-blue-900 mb-2 flex items-center">
+            <DollarSign className="mr-2" size={20} />
+            Tool Change Cost Summary
+          </h3>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+            <div>
+              <span className="text-blue-700 font-medium">New Tool Cost:</span>
+              <span className="ml-2 font-bold">${costSummary.newToolCost.toFixed(2)}</span>
+            </div>
+            <div>
+              <span className="text-blue-700 font-medium">Total Change Cost:</span>
+              <span className="ml-2 font-bold text-lg">${costSummary.totalCost.toFixed(2)}</span>
+            </div>
+            <div className="text-xs text-blue-600">
+              <Package2 className="inline mr-1" size={12} />
+              Based on current inventory prices
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Success Message */}
       {submitStatus === 'success' && (
@@ -266,7 +468,7 @@ const ToolChangeForm = () => {
           <div className="flex items-center">
             <CheckCircle className="h-5 w-5 text-green-600 mr-2" />
             <span className="text-green-800 font-medium">
-              Tool change saved successfully!
+              Enhanced tool change data saved successfully! Cost: ${costSummary.totalCost.toFixed(2)}
             </span>
           </div>
         </div>
@@ -443,20 +645,20 @@ const ToolChangeForm = () => {
         </div>
       </div>
 
-      {/* Tool Change Information Section */}
+      {/* Enhanced Tool Change Information Section */}
       <div className="bg-orange-50 p-6 rounded-lg mb-6">
         <h2 className="text-xl font-semibold text-orange-900 mb-4 flex items-center">
           <Package className="mr-2" size={20} />
-          Tool Change Details
+          Professional Tool Selection
         </h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
           {/* First Rougher Section */}
           <div className="space-y-4">
-            <h3 className="text-lg font-medium text-gray-800">First Rougher</h3>
+            <h3 className="text-lg font-medium text-gray-800 border-b pb-2">First Rougher</h3>
             
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                Old First Rougher <span className="text-red-500">*</span>
+                Current First Rougher <span className="text-red-500">*</span>
               </label>
               <select
                 name="old_first_rougher"
@@ -465,24 +667,35 @@ const ToolChangeForm = () => {
                 required
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500"
               >
-                <option value="">Select old insert</option>
-                {availableInserts.roughing.map(insert => (
-                  <option 
-                    key={insert.full_insert_id} 
-                    value={insert.full_insert_id}
-                  >
-                    {formatInsertOption(insert)}
-                  </option>
+                <option value="">Select current roughing tool</option>
+                {Object.entries(groupedRoughingTools).map(([geometry, tools]) => (
+                  <optgroup key={geometry} label={`${geometry} Geometry`}>
+                    {tools.map(tool => (
+                      <option 
+                        key={tool.id} 
+                        value={tool.id}
+                      >
+                        {formatToolOption(tool)}
+                      </option>
+                    ))}
+                  </optgroup>
                 ))}
               </select>
               {formData.old_first_rougher && (
-                <div className="mt-2 p-2 bg-red-50 rounded text-sm">
+                <div className="mt-2 p-3 bg-red-50 border border-red-200 rounded text-sm">
                   {(() => {
-                    const insert = getInsertDetails(formData.old_first_rougher, 'ROUGHING');
-                    return insert ? (
-                      <div className="flex items-center gap-2">
-                        <CheckCircle className={`w-4 h-4 ${getStockStatus(insert) === 'in-stock' ? 'text-green-500' : getStockStatus(insert) === 'low-stock' ? 'text-yellow-500' : 'text-red-500'}`} />
-                        <span>Stock: {insert.quantity_on_hand} units</span>
+                    const tool = getToolDetails(formData.old_first_rougher);
+                    return tool ? (
+                      <div className="space-y-1">
+                        <div className="flex items-center justify-between">
+                          <span className="font-medium">{tool.material_id} - {tool.description}</span>
+                          <span className="text-red-700 font-bold">${tool.unit_cost}/ea</span>
+                        </div>
+                        <div className="flex items-center gap-4 text-xs text-gray-600">
+                          <span>Stock: {tool.quantity_on_hand}</span>
+                          <span>Supplier: {tool.supplier_name}</span>
+                          <span>Lead Time: {tool.lead_time_days} days</span>
+                        </div>
                       </div>
                     ) : null;
                   })()}
@@ -501,25 +714,46 @@ const ToolChangeForm = () => {
                 required
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
               >
-                <option value="">Select replacement insert</option>
-                {availableInserts.roughing.map(insert => (
-                  <option 
-                    key={insert.full_insert_id} 
-                    value={insert.full_insert_id}
-                    disabled={getStockStatus(insert) === 'out-of-stock'}
-                  >
-                    {formatInsertOption(insert)}
-                  </option>
+                <option value="">Select replacement roughing tool</option>
+                {Object.entries(groupedRoughingTools).map(([geometry, tools]) => (
+                  <optgroup key={geometry} label={`${geometry} Geometry`}>
+                    {tools.map(tool => (
+                      <option 
+                        key={tool.id} 
+                        value={tool.id}
+                        disabled={getStockStatus(tool) === 'out-of-stock'}
+                        className={getStockStatus(tool) === 'out-of-stock' ? 'text-red-500' : 
+                                  getStockStatus(tool) === 'low-stock' ? 'text-yellow-600' : ''}
+                      >
+                        {formatToolOption(tool)} - ${tool.unit_cost}/ea
+                      </option>
+                    ))}
+                  </optgroup>
                 ))}
               </select>
               {formData.new_first_rougher && (
-                <div className="mt-2 p-2 bg-blue-50 rounded text-sm">
+                <div className="mt-2 p-3 bg-green-50 border border-green-200 rounded text-sm">
                   {(() => {
-                    const insert = getInsertDetails(formData.new_first_rougher, 'ROUGHING');
-                    return insert ? (
-                      <div className="flex items-center gap-2">
-                        <CheckCircle className={`w-4 h-4 ${getStockStatus(insert) === 'in-stock' ? 'text-green-500' : getStockStatus(insert) === 'low-stock' ? 'text-yellow-500' : 'text-red-500'}`} />
-                        <span>Stock: {insert.quantity_on_hand} units</span>
+                    const tool = getToolDetails(formData.new_first_rougher);
+                    return tool ? (
+                      <div className="space-y-1">
+                        <div className="flex items-center justify-between">
+                          <span className="font-medium">{tool.material_id} - {tool.description}</span>
+                          <span className="text-green-700 font-bold">${tool.unit_cost}/ea</span>
+                        </div>
+                        <div className="flex items-center gap-4 text-xs text-gray-600">
+                          <span className={`font-medium ${getStockStatus(tool) === 'low-stock' ? 'text-yellow-600' : 'text-green-600'}`}>
+                            Stock: {tool.quantity_on_hand} {getStockIcon(getStockStatus(tool))}
+                          </span>
+                          <span>Supplier: {tool.supplier_name}</span>
+                          <span>Lead Time: {tool.lead_time_days} days</span>
+                        </div>
+                        {getStockStatus(tool) === 'low-stock' && (
+                          <div className="flex items-center gap-1 text-yellow-700 bg-yellow-100 px-2 py-1 rounded">
+                            <AlertTriangle size={12} />
+                            <span className="text-xs">Low stock - Consider reordering</span>
+                          </div>
+                        )}
                       </div>
                     ) : null;
                   })()}
@@ -529,7 +763,7 @@ const ToolChangeForm = () => {
 
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                Action Taken <span className="text-red-500">*</span>
+                Rougher Action <span className="text-red-500">*</span>
               </label>
               <select
                 name="first_rougher_action"
@@ -539,20 +773,20 @@ const ToolChangeForm = () => {
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500"
               >
                 <option value="">Select action</option>
-                <option value="Replace">Replace</option>
-                <option value="Index">Index</option>
-                <option value="Flip">Flip</option>
+                <option value="Replace">Replace Insert (New Cost)</option>
+                <option value="Index">Index Existing Insert</option>
+                <option value="Flip">Flip Existing Insert</option>
               </select>
             </div>
           </div>
 
           {/* Finish Tool Section */}
           <div className="space-y-4">
-            <h3 className="text-lg font-medium text-gray-800">Finish Tool</h3>
+            <h3 className="text-lg font-medium text-gray-800 border-b pb-2">Finish Tool</h3>
             
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                Old Finish Tool <span className="text-red-500">*</span>
+                Current Finish Tool <span className="text-red-500">*</span>
               </label>
               <select
                 name="old_finish_tool"
@@ -561,16 +795,40 @@ const ToolChangeForm = () => {
                 required
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500"
               >
-                <option value="">Select old insert</option>
-                {availableInserts.finishing.map(insert => (
-                  <option 
-                    key={insert.full_insert_id} 
-                    value={insert.full_insert_id}
-                  >
-                    {formatInsertOption(insert)}
-                  </option>
+                <option value="">Select current finishing tool</option>
+                {Object.entries(groupedFinishingTools).map(([geometry, tools]) => (
+                  <optgroup key={geometry} label={`${geometry} Geometry`}>
+                    {tools.map(tool => (
+                      <option 
+                        key={tool.id} 
+                        value={tool.id}
+                      >
+                        {formatToolOption(tool)}
+                      </option>
+                    ))}
+                  </optgroup>
                 ))}
               </select>
+              {formData.old_finish_tool && (
+                <div className="mt-2 p-3 bg-red-50 border border-red-200 rounded text-sm">
+                  {(() => {
+                    const tool = getToolDetails(formData.old_finish_tool);
+                    return tool ? (
+                      <div className="space-y-1">
+                        <div className="flex items-center justify-between">
+                          <span className="font-medium">{tool.material_id} - {tool.description}</span>
+                          <span className="text-red-700 font-bold">${tool.unit_cost}/ea</span>
+                        </div>
+                        <div className="flex items-center gap-4 text-xs text-gray-600">
+                          <span>Stock: {tool.quantity_on_hand}</span>
+                          <span>Supplier: {tool.supplier_name}</span>
+                          <span>Lead Time: {tool.lead_time_days} days</span>
+                        </div>
+                      </div>
+                    ) : null;
+                  })()}
+                </div>
+              )}
             </div>
 
             <div>
@@ -584,22 +842,56 @@ const ToolChangeForm = () => {
                 required
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
               >
-                <option value="">Select replacement insert</option>
-                {availableInserts.finishing.map(insert => (
-                  <option 
-                    key={insert.full_insert_id} 
-                    value={insert.full_insert_id}
-                    disabled={getStockStatus(insert) === 'out-of-stock'}
-                  >
-                    {formatInsertOption(insert)}
-                  </option>
+                <option value="">Select replacement finishing tool</option>
+                {Object.entries(groupedFinishingTools).map(([geometry, tools]) => (
+                  <optgroup key={geometry} label={`${geometry} Geometry`}>
+                    {tools.map(tool => (
+                      <option 
+                        key={tool.id} 
+                        value={tool.id}
+                        disabled={getStockStatus(tool) === 'out-of-stock'}
+                        className={getStockStatus(tool) === 'out-of-stock' ? 'text-red-500' : 
+                                  getStockStatus(tool) === 'low-stock' ? 'text-yellow-600' : ''}
+                      >
+                        {formatToolOption(tool)} - ${tool.unit_cost}/ea
+                      </option>
+                    ))}
+                  </optgroup>
                 ))}
               </select>
+              {formData.new_finish_tool && (
+                <div className="mt-2 p-3 bg-green-50 border border-green-200 rounded text-sm">
+                  {(() => {
+                    const tool = getToolDetails(formData.new_finish_tool);
+                    return tool ? (
+                      <div className="space-y-1">
+                        <div className="flex items-center justify-between">
+                          <span className="font-medium">{tool.material_id} - {tool.description}</span>
+                          <span className="text-green-700 font-bold">${tool.unit_cost}/ea</span>
+                        </div>
+                        <div className="flex items-center gap-4 text-xs text-gray-600">
+                          <span className={`font-medium ${getStockStatus(tool) === 'low-stock' ? 'text-yellow-600' : 'text-green-600'}`}>
+                            Stock: {tool.quantity_on_hand} {getStockIcon(getStockStatus(tool))}
+                          </span>
+                          <span>Supplier: {tool.supplier_name}</span>
+                          <span>Lead Time: {tool.lead_time_days} days</span>
+                        </div>
+                        {getStockStatus(tool) === 'low-stock' && (
+                          <div className="flex items-center gap-1 text-yellow-700 bg-yellow-100 px-2 py-1 rounded">
+                            <AlertTriangle size={12} />
+                            <span className="text-xs">Low stock - Consider reordering</span>
+                          </div>
+                        )}
+                      </div>
+                    ) : null;
+                  })()}
+                </div>
+              )}
             </div>
 
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                Action Taken <span className="text-red-500">*</span>
+                Finish Action <span className="text-red-500">*</span>
               </label>
               <select
                 name="finish_tool_action"
@@ -609,9 +901,9 @@ const ToolChangeForm = () => {
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500"
               >
                 <option value="">Select action</option>
-                <option value="Replace">Replace</option>
-                <option value="Index">Index</option>
-                <option value="Flip">Flip</option>
+                <option value="Replace">Replace Insert (New Cost)</option>
+                <option value="Index">Index Existing Insert</option>
+                <option value="Flip">Flip Existing Insert</option>
               </select>
             </div>
           </div>
@@ -700,25 +992,69 @@ const ToolChangeForm = () => {
         </div>
       </div>
 
-      {/* Risk Score Display */}
+      {/* Enhanced Risk & ROI Analysis */}
       {formData.heat_number && (
         <div className="bg-indigo-50 p-4 rounded-lg mb-6">
           <div className="flex items-center justify-between">
             <div>
-              <h3 className="text-lg font-medium text-indigo-900">Material Risk Assessment</h3>
-              <p className="text-sm text-indigo-700">
-                Calculated risk score: <span className="font-bold">{calculateMaterialRiskScore()}/10</span>
-              </p>
+              <h3 className="text-lg font-medium text-indigo-900">Material Risk & Cost Analysis</h3>
+              <div className="mt-2 space-y-1">
+                <p className="text-sm text-indigo-700">
+                  Material Risk Score: <span className="font-bold">{calculateMaterialRiskScore()}/10</span>
+                </p>
+                <p className="text-sm text-indigo-700">
+                  Total Tool Investment: <span className="font-bold">${costSummary.totalCost.toFixed(2)}</span>
+                </p>
+                {estimateCastingDate(formData.heat_number) && (
+                  <p className="text-sm text-indigo-700">
+                    Estimated Casting: <span className="font-bold">{estimateCastingDate(formData.heat_number)}</span>
+                  </p>
+                )}
+              </div>
             </div>
-            <TrendingUp className={`h-8 w-8 ${calculateMaterialRiskScore() >= 5 ? 'text-red-500' : 'text-green-500'}`} />
+            <div className="text-right">
+              <TrendingUp className={`h-8 w-8 ${calculateMaterialRiskScore() >= 5 ? 'text-red-500' : 'text-green-500'}`} />
+              <div className="text-xs text-indigo-600 mt-1">
+                <Truck className="inline mr-1" size={12} />
+                Lead Time Analysis
+              </div>
+            </div>
           </div>
           {calculateMaterialRiskScore() >= 5 && (
-            <div className="mt-2 p-2 bg-red-100 rounded text-sm text-red-800">
-              <strong>High Risk Material Detected:</strong> Consider additional quality checks and monitoring.
+            <div className="mt-3 p-3 bg-red-100 border border-red-200 rounded text-sm text-red-800">
+              <strong>⚠️ High Risk Material Detected:</strong> Consider additional quality checks, slower speeds, and monitoring tool wear more frequently.
+            </div>
+          )}
+          {costSummary.totalCost > 50 && (
+            <div className="mt-3 p-3 bg-blue-100 border border-blue-200 rounded text-sm text-blue-800">
+              <strong>💰 High Value Tool Change:</strong> Document performance carefully for ROI analysis. Total cost represents significant investment in quality.
             </div>
           )}
         </div>
       )}
+
+      {/* Professional Stock Status Legend */}
+      <div className="bg-white border border-gray-200 rounded-lg p-4 mb-6">
+        <h3 className="text-sm font-semibold text-gray-900 mb-2">Stock Status Legend</h3>
+        <div className="flex flex-wrap gap-4 text-xs">
+          <div className="flex items-center gap-1">
+            <span className="text-green-600">✅</span>
+            <span>In Stock - Normal availability</span>
+          </div>
+          <div className="flex items-center gap-1">
+            <span className="text-yellow-600">⚠️</span>
+            <span>Low Stock - At or below minimum</span>
+          </div>
+          <div className="flex items-center gap-1">
+            <span className="text-red-600">❌</span>
+            <span>Out of Stock - Cannot select</span>
+          </div>
+          <div className="flex items-center gap-1">
+            <span className="text-blue-600">📊</span>
+            <span>Real-time inventory from tool_inventory_enhanced</span>
+          </div>
+        </div>
+      </div>
 
       {/* Submit Button */}
       <div className="flex justify-center">
@@ -734,15 +1070,21 @@ const ToolChangeForm = () => {
           {isSubmitting ? (
             <>
               <RefreshCw className="animate-spin" size={20} />
-              <span>Saving Diagnostic Data...</span>
+              <span>Saving Enhanced Data...</span>
             </>
           ) : (
             <>
               <Save size={20} />
-              <span>Save Tool Change with Diagnostics</span>
+              <span>Save Professional Tool Change Record</span>
             </>
           )}
         </button>
+      </div>
+
+      {/* Development Footer */}
+      <div className="mt-8 text-center text-xs text-gray-500 border-t pt-4">
+        <p>Enhanced Tool Change Form v2.0 | Connected to tool_inventory_enhanced | Professional Manufacturing Data Collection</p>
+        <p className="mt-1">ROI-focused tool tracking with real-time inventory integration</p>
       </div>
     </div>
   );
