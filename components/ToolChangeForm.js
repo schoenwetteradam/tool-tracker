@@ -71,18 +71,35 @@ const ToolChangeForm = () => {
     try {
       setInsertsLoading(true);
       
-      const roughingResponse = await fetch('/api/inserts/allowed?operation=ROUGHING');
-      const roughingData = await roughingResponse.json();
-      
-      const finishingResponse = await fetch('/api/inserts/allowed?operation=FINISHING');
-      const finishingData = await finishingResponse.json();
-      
-      setAvailableInserts({
-        roughing: roughingData,
-        finishing: finishingData
-      });
+      // Check if the API endpoints exist, if not use fallback data
+      try {
+        const roughingResponse = await fetch('/api/inserts/allowed?operation=ROUGHING');
+        const roughingData = await roughingResponse.json();
+        
+        const finishingResponse = await fetch('/api/inserts/allowed?operation=FINISHING');
+        const finishingData = await finishingResponse.json();
+        
+        setAvailableInserts({
+          roughing: roughingData || [],
+          finishing: finishingData || []
+        });
+      } catch (apiError) {
+        console.warn('API endpoints not available, using fallback data');
+        // Fallback data for development/testing
+        setAvailableInserts({
+          roughing: [
+            { full_insert_id: 'CNMG432MP', description: 'CNMG 432 MP Grade', quantity_on_hand: 50, min_quantity: 10 },
+            { full_insert_id: 'CNMG432MG', description: 'CNMG 432 MG Grade', quantity_on_hand: 25, min_quantity: 10 },
+          ],
+          finishing: [
+            { full_insert_id: 'WNMG432MP', description: 'WNMG 432 MP Grade', quantity_on_hand: 30, min_quantity: 5 },
+            { full_insert_id: 'WNMG432MG', description: 'WNMG 432 MG Grade', quantity_on_hand: 15, min_quantity: 5 },
+          ]
+        });
+      }
     } catch (err) {
       console.error('Error fetching inserts:', err);
+      setAvailableInserts({ roughing: [], finishing: [] });
     } finally {
       setInsertsLoading(false);
     }
@@ -127,11 +144,13 @@ const ToolChangeForm = () => {
   };
 
   const estimateCastingDate = (heatNumber) => {
-    if (heatNumber?.startsWith('24')) {
+    if (!heatNumber) return null;
+    
+    if (heatNumber.startsWith('24')) {
       const sequence = heatNumber.substring(2);
       const monthEstimate = Math.ceil(parseInt(sequence.substring(0, 1)) * 1.2);
       return `2024-${monthEstimate.toString().padStart(2, '0')}-01`;
-    } else if (heatNumber?.startsWith('25')) {
+    } else if (heatNumber.startsWith('25')) {
       const sequence = heatNumber.substring(2);
       const monthEstimate = Math.ceil(parseInt(sequence.substring(0, 1)) * 1.2);
       return `2025-${monthEstimate.toString().padStart(2, '0')}-01`;
@@ -194,6 +213,7 @@ const ToolChangeForm = () => {
         console.warn('High-risk material detected:', cleanedData.heat_number);
       }
 
+      // Reset form after successful submission
       setTimeout(() => {
         setFormData({
           ...getCurrentDateTime(),
@@ -234,336 +254,213 @@ const ToolChangeForm = () => {
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
           <RefreshCw className="animate-spin h-8 w-8 text-blue-600 mx-auto mb-4" />
-          <p className="text-gray-600">Loading approved inserts...</p>
+          <p className="text-gray-600">Loading insert data...</p>
         </div>
       </div>
     );
   }
 
-  const riskScore = calculateMaterialRiskScore();
-
   return (
-    <div className="min-h-screen bg-gray-50">
-      <header className="bg-white shadow-sm border-b">
-        <div className="max-w-4xl mx-auto px-4 py-4">
-          <div className="flex justify-between items-center">
-            <div className="flex items-center space-x-4">
-              <button
-                onClick={() => window.history.back()}
-                className="flex items-center space-x-2 text-gray-600 hover:text-gray-900"
-              >
-                <ArrowLeft size={20} />
-                <span>Dashboard</span>
-              </button>
-              <h1 className="text-3xl font-bold text-gray-900">Enhanced Insert Tracking</h1>
-            </div>
-            <div className="text-sm text-gray-500">2024 Process Diagnostic Mode</div>
+    <div className="max-w-4xl mx-auto p-6 bg-white">
+      <div className="mb-6">
+        <h1 className="text-3xl font-bold text-gray-900 mb-2">Tool Change Form</h1>
+        <p className="text-gray-600">Record diagnostic tool change information</p>
+      </div>
+
+      {/* Success Message */}
+      {submitStatus === 'success' && (
+        <div className="mb-6 bg-green-50 border border-green-200 rounded-lg p-4">
+          <div className="flex items-center">
+            <CheckCircle className="h-5 w-5 text-green-600 mr-2" />
+            <span className="text-green-800 font-medium">
+              Tool change saved successfully!
+            </span>
           </div>
         </div>
-      </header>
+      )}
 
-      <div className="max-w-4xl mx-auto px-4 py-8">
-        {submitStatus === 'success' && (
-          <div className="mb-6 bg-green-50 border border-green-200 rounded-lg p-4">
-            <div className="flex items-center">
-              <CheckCircle className="h-5 w-5 text-green-600 mr-2" />
-              <span className="text-green-800 font-medium">
-                Tool change logged successfully with diagnostic data!
-              </span>
-            </div>
-          </div>
-        )}
-
-        {submitStatus === 'error' && (
-          <div className="mb-6 bg-red-50 border border-red-200 rounded-lg p-4">
-            <div className="flex items-center">
-              <AlertTriangle className="h-5 w-5 text-red-600 mr-2" />
-              <span className="text-red-800 font-medium">
-                Error saving tool change. Please check required fields.
-              </span>
-            </div>
-          </div>
-        )}
-
-        <div className="bg-blue-50 p-6 rounded-lg mb-6">
-          <h2 className="text-xl font-semibold text-blue-900 mb-4 flex items-center">
-            <Clock className="mr-2" size={20} />
-            Basic Information
-          </h2>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Date <span className="text-red-500">*</span>
-              </label>
-              <input
-                type="date"
-                name="date"
-                value={formData.date}
-                onChange={handleInputChange}
-                required
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Time <span className="text-red-500">*</span>
-              </label>
-              <input
-                type="time"
-                name="time"
-                value={formData.time}
-                onChange={handleInputChange}
-                required
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Shift <span className="text-red-500">*</span>
-              </label>
-              <select
-                name="shift"
-                value={formData.shift}
-                onChange={handleInputChange}
-                required
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-              >
-                <option value="">Select Shift</option>
-                <option value="1">1st Shift (6 AM - 2 PM)</option>
-                <option value="2">2nd Shift (2 PM - 10 PM)</option>
-                <option value="3">3rd Shift (10 PM - 6 AM)</option>
-              </select>
-            </div>
+      {/* Error Message */}
+      {submitStatus === 'error' && (
+        <div className="mb-6 bg-red-50 border border-red-200 rounded-lg p-4">
+          <div className="flex items-center">
+            <AlertTriangle className="h-5 w-5 text-red-600 mr-2" />
+            <span className="text-red-800 font-medium">
+              Error saving tool change. Please check required fields.
+            </span>
           </div>
         </div>
+      )}
 
-        <div className="bg-green-50 p-6 rounded-lg mb-6">
-          <h2 className="text-xl font-semibold text-green-900 mb-4 flex items-center">
-            <User className="mr-2" size={20} />
-            Operator Information
-          </h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Operator Name <span className="text-red-500">*</span>
-              </label>
-              <input
-                type="text"
-                name="operator"
-                value={formData.operator}
-                onChange={handleInputChange}
-                required
-                placeholder="First Last"
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Employee ID <span className="text-red-500">*</span>
-              </label>
-              <input
-                type="text"
-                name="operator_id"
-                value={formData.operator_id}
-                onChange={handleInputChange}
-                required
-                placeholder="Badge number or employee ID"
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
-              />
-            </div>
+      {/* Basic Information Section */}
+      <div className="bg-blue-50 p-6 rounded-lg mb-6">
+        <h2 className="text-xl font-semibold text-blue-900 mb-4 flex items-center">
+          <Clock className="mr-2" size={20} />
+          Basic Information
+        </h2>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Date <span className="text-red-500">*</span>
+            </label>
+            <input
+              type="date"
+              name="date"
+              value={formData.date}
+              onChange={handleInputChange}
+              required
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Time <span className="text-red-500">*</span>
+            </label>
+            <input
+              type="time"
+              name="time"
+              value={formData.time}
+              onChange={handleInputChange}
+              required
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Shift <span className="text-red-500">*</span>
+            </label>
+            <select
+              name="shift"
+              value={formData.shift}
+              onChange={handleInputChange}
+              required
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            >
+              <option value="">Select shift</option>
+              <option value="1">1st Shift (6AM-2PM)</option>
+              <option value="2">2nd Shift (2PM-10PM)</option>
+              <option value="3">3rd Shift (10PM-6AM)</option>
+            </select>
           </div>
         </div>
+      </div>
 
-        <div className="bg-purple-50 p-6 rounded-lg mb-6">
-          <h2 className="text-xl font-semibold text-purple-900 mb-4 flex items-center">
-            <Wrench className="mr-2" size={20} />
-            Equipment & Operation
-          </h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Work Center <span className="text-red-500">*</span>
-              </label>
-              <input
-                type="text"
-                name="work_center"
-                value={formData.work_center}
-                onChange={handleInputChange}
-                required
-                placeholder="e.g., 1770, 1689, etc."
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Equipment Number <span className="text-red-500">*</span>
-              </label>
-              <input
-                type="text"
-                name="equipment_number"
-                value={formData.equipment_number}
-                onChange={handleInputChange}
-                required
-                placeholder="Machine ID"
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Operation <span className="text-red-500">*</span>
-              </label>
-              <select
-                name="operation"
-                value={formData.operation}
-                onChange={handleInputChange}
-                required
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500"
-              >
-                <option value="Bore">Bore</option>
-                <option value="Turn">Turn</option>
-                <option value="Face">Face</option>
-                <option value="Thread">Thread</option>
-                <option value="Drill">Drill</option>
-                <option value="Mill">Mill</option>
-              </select>
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Part Number <span className="text-red-500">*</span>
-              </label>
-              <input
-                type="text"
-                name="part_number"
-                value={formData.part_number}
-                onChange={handleInputChange}
-                required
-                placeholder="Part being machined"
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Job Number</label>
-              <input
-                type="text"
-                name="job_number"
-                value={formData.job_number}
-                onChange={handleInputChange}
-                placeholder="Work order number"
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500"
-              />
-            </div>
+      {/* Operator Information Section */}
+      <div className="bg-green-50 p-6 rounded-lg mb-6">
+        <h2 className="text-xl font-semibold text-green-900 mb-4 flex items-center">
+          <User className="mr-2" size={20} />
+          Operator Information
+        </h2>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Operator Name <span className="text-red-500">*</span>
+            </label>
+            <input
+              type="text"
+              name="operator"
+              value={formData.operator}
+              onChange={handleInputChange}
+              required
+              placeholder="Enter operator name"
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Clock Number
+            </label>
+            <input
+              type="text"
+              name="operator_clock_number"
+              value={formData.operator_clock_number}
+              onChange={handleInputChange}
+              placeholder="Enter clock number"
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
+            />
           </div>
         </div>
+      </div>
 
-        <div className="bg-orange-50 p-6 rounded-lg mb-6">
-          <h2 className="text-xl font-semibold text-orange-900 mb-4 flex items-center">
-            <TrendingUp className="mr-2" size={20} />
-            Material Diagnostic Information
-          </h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Heat Number <span className="text-red-500">*</span>
-              </label>
-              <input
-                type="text"
-                name="heat_number"
-                value={formData.heat_number}
-                onChange={handleInputChange}
-                placeholder="e.g., 24S0125, 25A0920"
-                pattern="[0-9]{2}[A-Z][0-9]{4}"
-                title="Format: 24S0125 (YY + Letter + 4 digits)"
-                required
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500"
-              />
-              <p className="text-xs text-gray-500 mt-1">
-                Critical for 2024 process correlation analysis
-              </p>
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Material Appearance
-              </label>
-              <select
-                name="material_appearance"
-                value={formData.material_appearance}
-                onChange={handleInputChange}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500"
-              >
-                <option value="Normal">Normal</option>
-                <option value="Discolored">Discolored</option>
-                <option value="Rough Surface">Rough Surface</option>
-                <option value="Porosity Visible">Porosity Visible</option>
-                <option value="Hard Spots">Hard Spots</option>
-                <option value="Inclusions">Inclusions Visible</option>
-              </select>
-            </div>
+      {/* Equipment Information Section */}
+      <div className="bg-purple-50 p-6 rounded-lg mb-6">
+        <h2 className="text-xl font-semibold text-purple-900 mb-4 flex items-center">
+          <Wrench className="mr-2" size={20} />
+          Equipment & Job Information
+        </h2>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Work Center <span className="text-red-500">*</span>
+            </label>
+            <input
+              type="text"
+              name="work_center"
+              value={formData.work_center}
+              onChange={handleInputChange}
+              required
+              placeholder="Enter work center"
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500"
+            />
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Insert Failure Mode
-              </label>
-              <select
-                name="insert_failure_mode"
-                value={formData.insert_failure_mode}
-                onChange={handleInputChange}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500"
-              >
-                <option value="">Select failure mode</option>
-                <option value="Edge Chipping">Edge Chipping</option>
-                <option value="Crater Wear">Crater Wear</option>
-                <option value="Sudden Fracture">Sudden Fracture</option>
-                <option value="Premature Dulling">Premature Dulling</option>
-                <option value="Built-up Edge">Built-up Edge</option>
-                <option value="Thermal Cracking">Thermal Cracking</option>
-              </select>
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Operator Observations
-              </label>
-              <textarea
-                name="operator_observations"
-                value={formData.operator_observations}
-                onChange={handleInputChange}
-                rows="2"
-                placeholder="Material felt different? Unusual sounds? Surface finish issues?"
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500"
-              />
-            </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Equipment Number <span className="text-red-500">*</span>
+            </label>
+            <input
+              type="text"
+              name="equipment_number"
+              value={formData.equipment_number}
+              onChange={handleInputChange}
+              required
+              placeholder="Enter equipment number"
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500"
+            />
           </div>
-
-          {formData.heat_number?.startsWith('24') && (
-            <div className="mt-4 p-3 bg-yellow-100 border border-yellow-300 rounded-md">
-              <div className="flex items-center">
-                <AlertTriangle className="h-5 w-5 text-yellow-600 mr-2" />
-                <span className="text-sm font-medium text-yellow-800">
-                  2024 Material Detected - Enhanced tracking enabled for process correlation
-                </span>
-              </div>
-            </div>
-          )}
-
-          {riskScore >= 5 && (
-            <div className="mt-4 p-3 bg-red-100 border border-red-300 rounded-md">
-              <div className="flex items-center">
-                <AlertTriangle className="h-5 w-5 text-red-600 mr-2" />
-                <span className="text-sm font-medium text-red-800">
-                  High Risk Material (Score: {riskScore}/10) - Consider enhanced monitoring
-                </span>
-              </div>
-            </div>
-          )}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Operation <span className="text-red-500">*</span>
+            </label>
+            <select
+              name="operation"
+              value={formData.operation}
+              onChange={handleInputChange}
+              required
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500"
+            >
+              <option value="Bore">Bore</option>
+              <option value="Turn">Turn</option>
+              <option value="Face">Face</option>
+              <option value="Thread">Thread</option>
+            </select>
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Part Number <span className="text-red-500">*</span>
+            </label>
+            <input
+              type="text"
+              name="part_number"
+              value={formData.part_number}
+              onChange={handleInputChange}
+              required
+              placeholder="Enter part number"
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500"
+            />
+          </div>
         </div>
+      </div>
 
-        <div className="bg-red-50 p-6 rounded-lg mb-6">
-          <h2 className="text-xl font-semibold text-red-900 mb-4 flex items-center">
-            <Package className="mr-2" size={20} />
-            Tool Change Details
-          </h2>
-
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      {/* Tool Change Information Section */}
+      <div className="bg-orange-50 p-6 rounded-lg mb-6">
+        <h2 className="text-xl font-semibold text-orange-900 mb-4 flex items-center">
+          <Package className="mr-2" size={20} />
+          Tool Change Details
+        </h2>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          {/* First Rougher Section */}
+          <div className="space-y-4">
+            <h3 className="text-lg font-medium text-gray-800">First Rougher</h3>
+            
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 Old First Rougher <span className="text-red-500">*</span>
@@ -573,157 +470,27 @@ const ToolChangeForm = () => {
                 value={formData.old_first_rougher}
                 onChange={handleInputChange}
                 required
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-red-500"
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500"
               >
-                <option value="">Select current insert</option>
+                <option value="">Select old insert</option>
                 {availableInserts.roughing.map(insert => (
                   <option 
                     key={insert.full_insert_id} 
                     value={insert.full_insert_id}
-                    disabled={getStockStatus(insert) === 'out-of-stock'}
                   >
                     {formatInsertOption(insert)}
                   </option>
                 ))}
               </select>
               {formData.old_first_rougher && (
-                <div className="mt-2 p-2 bg-blue-50 rounded text-sm">
+                <div className="mt-2 p-2 bg-red-50 rounded text-sm">
                   {(() => {
                     const insert = getInsertDetails(formData.old_first_rougher, 'ROUGHING');
                     return insert ? (
                       <div className="flex items-center gap-2">
-                        <CheckCircle className={`w-4 h-4 ${getStockStatus(insert) === 'in-stock' ? 'text-green-500' : 'text-yellow-500'}`} />
-                        <span>Stock: {insert.quantity_on_hand} | Cost: ${insert.unit_cost}/ea</span>
-                    )}
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                New Finish Tool <span className="text-red-500">*</span>
-              </label>
-              <select
-                name="new_finish_tool"
-                value={formData.new_finish_tool}
-                onChange={handleInputChange}
-                required
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-red-500"
-              >
-                <option value="">Select replacement insert</option>
-                {availableInserts.finishing.map(insert => (
-                  <option 
-                    key={insert.full_insert_id} 
-                    value={insert.full_insert_id}
-                    disabled={getStockStatus(insert) === 'out-of-stock'}
-                  >
-                    {formatInsertOption(insert)}
-                  </option>
-                ))}
-              </select>
-              {formData.new_finish_tool && (
-                <div className="mt-2 p-2 bg-blue-50 rounded text-sm">
-                  {(() => {
-                    const insert = getInsertDetails(formData.new_finish_tool, 'FINISHING');
-                    return insert ? (
-                      <div className="flex items-center gap-2">
-                        <CheckCircle className={`w-4 h-4 ${getStockStatus(insert) === 'in-stock' ? 'text-green-500' : 'text-yellow-500'}`} />
-                        <span>Stock: {insert.quantity_on_hand} | Cost: ${insert.unit_cost}/ea</span>
+                        <CheckCircle className={`w-4 h-4 ${getStockStatus(insert) === 'in-stock' ? 'text-green-500' : getStockStatus(insert) === 'low-stock' ? 'text-yellow-500' : 'text-red-500'}`} />
+                        <span>Stock: {insert.quantity_on_hand} units</span>
                       </div>
-                    ) : null;
-                  })()}
-                </div>
-              )}
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Finish Tool Action <span className="text-red-500">*</span>
-              </label>
-              <select
-                name="finish_tool_action"
-                value={formData.finish_tool_action}
-                onChange={handleInputChange}
-                required
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-red-500"
-              >
-                <option value="">Select action</option>
-                <option value="new">New Insert</option>
-                <option value="turn">Turn Insert</option>
-                <option value="none">No Change</option>
-              </select>
-            </div>
-          </div>
-        </div>
-
-        <div className="bg-gray-50 p-6 rounded-lg mb-6">
-          <h2 className="text-xl font-semibold text-gray-900 mb-4">
-            Change Reason & Notes
-          </h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Change Reason <span className="text-red-500">*</span>
-              </label>
-              <select
-                name="change_reason"
-                value={formData.change_reason}
-                onChange={handleInputChange}
-                required
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-gray-500"
-              >
-                <option value="">Select reason</option>
-                <option value="Normal Wear">Normal Wear</option>
-                <option value="Tool Breakage">Tool Breakage</option>
-                <option value="Chipped Edge">Chipped Edge</option>
-                <option value="Poor Finish">Poor Finish</option>
-                <option value="Size Issues">Size Issues</option>
-                <option value="Scheduled Change">Scheduled Change</option>
-              </select>
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Additional Notes
-              </label>
-              <textarea
-                name="notes"
-                value={formData.notes}
-                onChange={handleInputChange}
-                rows="3"
-                placeholder="Any additional observations or context..."
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-gray-500"
-              />
-            </div>
-          </div>
-        </div>
-
-        <div className="flex justify-center">
-          <button
-            onClick={handleSubmit}
-            disabled={isSubmitting}
-            className={`flex items-center space-x-2 px-8 py-3 rounded-lg font-medium text-white transition-colors ${
-              isSubmitting
-                ? 'bg-gray-400 cursor-not-allowed'
-                : 'bg-blue-600 hover:bg-blue-700 focus:ring-2 focus:ring-blue-500'
-            }`}
-          >
-            {isSubmitting ? (
-              <>
-                <RefreshCw className="animate-spin" size={20} />
-                <span>Saving Diagnostic Data...</span>
-              </>
-            ) : (
-              <>
-                <Save size={20} />
-                <span>Save Tool Change with Diagnostics</span>
-              </>
-            )}
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-};
-
-export default ToolChangeForm;
                     ) : null;
                   })()}
                 </div>
@@ -739,7 +506,7 @@ export default ToolChangeForm;
                 value={formData.new_first_rougher}
                 onChange={handleInputChange}
                 required
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-red-500"
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
               >
                 <option value="">Select replacement insert</option>
                 {availableInserts.roughing.map(insert => (
@@ -758,8 +525,8 @@ export default ToolChangeForm;
                     const insert = getInsertDetails(formData.new_first_rougher, 'ROUGHING');
                     return insert ? (
                       <div className="flex items-center gap-2">
-                        <CheckCircle className={`w-4 h-4 ${getStockStatus(insert) === 'in-stock' ? 'text-green-500' : 'text-yellow-500'}`} />
-                        <span>Stock: {insert.quantity_on_hand} | Cost: ${insert.unit_cost}/ea</span>
+                        <CheckCircle className={`w-4 h-4 ${getStockStatus(insert) === 'in-stock' ? 'text-green-500' : getStockStatus(insert) === 'low-stock' ? 'text-yellow-500' : 'text-red-500'}`} />
+                        <span>Stock: {insert.quantity_on_hand} units</span>
                       </div>
                     ) : null;
                   })()}
@@ -769,24 +536,27 @@ export default ToolChangeForm;
 
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                First Rougher Action <span className="text-red-500">*</span>
+                Action Taken <span className="text-red-500">*</span>
               </label>
               <select
                 name="first_rougher_action"
                 value={formData.first_rougher_action}
                 onChange={handleInputChange}
                 required
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-red-500"
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500"
               >
                 <option value="">Select action</option>
-                <option value="new">New Insert</option>
-                <option value="turn">Turn Insert</option>
-                <option value="none">No Change</option>
+                <option value="Replace">Replace</option>
+                <option value="Index">Index</option>
+                <option value="Flip">Flip</option>
               </select>
             </div>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
+          {/* Finish Tool Section */}
+          <div className="space-y-4">
+            <h3 className="text-lg font-medium text-gray-800">Finish Tool</h3>
+            
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 Old Finish Tool <span className="text-red-500">*</span>
@@ -796,9 +566,32 @@ export default ToolChangeForm;
                 value={formData.old_finish_tool}
                 onChange={handleInputChange}
                 required
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-red-500"
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500"
               >
-                <option value="">Select current insert</option>
+                <option value="">Select old insert</option>
+                {availableInserts.finishing.map(insert => (
+                  <option 
+                    key={insert.full_insert_id} 
+                    value={insert.full_insert_id}
+                  >
+                    {formatInsertOption(insert)}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                New Finish Tool <span className="text-red-500">*</span>
+              </label>
+              <select
+                name="new_finish_tool"
+                value={formData.new_finish_tool}
+                onChange={handleInputChange}
+                required
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
+              >
+                <option value="">Select replacement insert</option>
                 {availableInserts.finishing.map(insert => (
                   <option 
                     key={insert.full_insert_id} 
@@ -809,15 +602,188 @@ export default ToolChangeForm;
                   </option>
                 ))}
               </select>
-              {formData.old_finish_tool && (
-                <div className="mt-2 p-2 bg-blue-50 rounded text-sm">
-                  {(() => {
-                    const insert = getInsertDetails(formData.old_finish_tool, 'FINISHING');
-                    return insert ? (
-                      <div className="flex items-center gap-2">
-                        <CheckCircle className={`w-4 h-4 ${getStockStatus(insert) === 'in-stock' ? 'text-green-500' : 'text-yellow-500'}`} />
-                        <span>Stock: {insert.quantity_on_hand} | Cost: ${insert.unit_cost}/ea</span>
-                      </div>
-                    ) : null;
-                  })()}
-                </div
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Action Taken <span className="text-red-500">*</span>
+              </label>
+              <select
+                name="finish_tool_action"
+                value={formData.finish_tool_action}
+                onChange={handleInputChange}
+                required
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500"
+              >
+                <option value="">Select action</option>
+                <option value="Replace">Replace</option>
+                <option value="Index">Index</option>
+                <option value="Flip">Flip</option>
+              </select>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Material Information Section */}
+      <div className="bg-yellow-50 p-6 rounded-lg mb-6">
+        <h2 className="text-xl font-semibold text-yellow-900 mb-4">
+          Material & Diagnostic Information
+        </h2>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Heat Number <span className="text-red-500">*</span>
+            </label>
+            <input
+              type="text"
+              name="heat_number"
+              value={formData.heat_number}
+              onChange={handleInputChange}
+              required
+              placeholder="Enter heat number"
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-yellow-500"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Material Appearance
+            </label>
+            <select
+              name="material_appearance"
+              value={formData.material_appearance}
+              onChange={handleInputChange}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-yellow-500"
+            >
+              <option value="Normal">Normal</option>
+              <option value="Discolored">Discolored</option>
+              <option value="Cracked">Cracked</option>
+              <option value="Porous">Porous</option>
+              <option value="Hard Spots">Hard Spots</option>
+            </select>
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Insert Failure Mode
+            </label>
+            <select
+              name="insert_failure_mode"
+              value={formData.insert_failure_mode}
+              onChange={handleInputChange}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-yellow-500"
+            >
+              <option value="">Select failure mode</option>
+              <option value="Normal Wear">Normal Wear</option>
+              <option value="Edge Chipping">Edge Chipping</option>
+              <option value="Sudden Fracture">Sudden Fracture</option>
+              <option value="Crater Wear">Crater Wear</option>
+              <option value="Built-up Edge">Built-up Edge</option>
+            </select>
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Operator Observations
+            </label>
+            <textarea
+              name="operator_observations"
+              value={formData.operator_observations}
+              onChange={handleInputChange}
+              rows="2"
+              placeholder="Any observations about material or cutting conditions..."
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-yellow-500"
+            />
+          </div>
+        </div>
+      </div>
+
+      {/* Change Reason & Notes Section */}
+      <div className="bg-gray-50 p-6 rounded-lg mb-6">
+        <h2 className="text-xl font-semibold text-gray-900 mb-4">
+          Change Reason & Notes
+        </h2>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Change Reason <span className="text-red-500">*</span>
+            </label>
+            <select
+              name="change_reason"
+              value={formData.change_reason}
+              onChange={handleInputChange}
+              required
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-gray-500"
+            >
+              <option value="">Select reason</option>
+              <option value="Normal Wear">Normal Wear</option>
+              <option value="Tool Breakage">Tool Breakage</option>
+              <option value="Chipped Edge">Chipped Edge</option>
+              <option value="Poor Finish">Poor Finish</option>
+              <option value="Size Issues">Size Issues</option>
+              <option value="Scheduled Change">Scheduled Change</option>
+            </select>
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Additional Notes
+            </label>
+            <textarea
+              name="notes"
+              value={formData.notes}
+              onChange={handleInputChange}
+              rows="3"
+              placeholder="Any additional observations or context..."
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-gray-500"
+            />
+          </div>
+        </div>
+      </div>
+
+      {/* Risk Score Display */}
+      {formData.heat_number && (
+        <div className="bg-indigo-50 p-4 rounded-lg mb-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <h3 className="text-lg font-medium text-indigo-900">Material Risk Assessment</h3>
+              <p className="text-sm text-indigo-700">
+                Calculated risk score: <span className="font-bold">{calculateMaterialRiskScore()}/10</span>
+              </p>
+            </div>
+            <TrendingUp className={`h-8 w-8 ${calculateMaterialRiskScore() >= 5 ? 'text-red-500' : 'text-green-500'}`} />
+          </div>
+          {calculateMaterialRiskScore() >= 5 && (
+            <div className="mt-2 p-2 bg-red-100 rounded text-sm text-red-800">
+              <strong>High Risk Material Detected:</strong> Consider additional quality checks and monitoring.
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Submit Button */}
+      <div className="flex justify-center">
+        <button
+          onClick={handleSubmit}
+          disabled={isSubmitting}
+          className={`flex items-center space-x-2 px-8 py-3 rounded-lg font-medium text-white transition-colors ${
+            isSubmitting
+              ? 'bg-gray-400 cursor-not-allowed'
+              : 'bg-blue-600 hover:bg-blue-700 focus:ring-2 focus:ring-blue-500'
+          }`}
+        >
+          {isSubmitting ? (
+            <>
+              <RefreshCw className="animate-spin" size={20} />
+              <span>Saving Diagnostic Data...</span>
+            </>
+          ) : (
+            <>
+              <Save size={20} />
+              <span>Save Tool Change with Diagnostics</span>
+            </>
+          )}
+        </button>
+      </div>
+    </div>
+  );
+};
+
+export default ToolChangeForm;
