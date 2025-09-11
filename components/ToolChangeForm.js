@@ -42,8 +42,6 @@ const ToolChangeForm = () => {
     job_number: '',
     heat_number: '',
     material_appearance: 'Normal',
-    insert_failure_mode: '',
-    operator_observations: '',
     old_first_rougher: '',
     new_first_rougher: '',
     first_rougher_action: '',
@@ -136,7 +134,6 @@ const ToolChangeForm = () => {
 
     if (formData.heat_number?.startsWith('24')) riskScore += 2;
     if (formData.material_appearance && formData.material_appearance !== 'Normal') riskScore += 1;
-    if (formData.insert_failure_mode === 'Sudden Fracture' || formData.insert_failure_mode === 'Edge Chipping') riskScore += 1;
     if (formData.change_reason === 'Tool Breakage') riskScore += 2;
     if (formData.change_reason === 'Chipped Edge') riskScore += 1;
 
@@ -198,8 +195,6 @@ const ToolChangeForm = () => {
         heat_number: formData.heat_number || null,
         casting_date: estimateCastingDate(formData.heat_number),
         material_appearance: formData.material_appearance || 'Normal',
-        insert_failure_mode: formData.insert_failure_mode || null,
-        operator_observations: formData.operator_observations || null,
         material_risk_score: calculateMaterialRiskScore(),
         change_reason: formData.change_reason || null,
         notes: formData.notes || null,
@@ -228,8 +223,6 @@ const ToolChangeForm = () => {
           job_number: '',
           heat_number: '',
           material_appearance: 'Normal',
-          insert_failure_mode: '',
-          operator_observations: '',
           old_first_rougher: '',
           new_first_rougher: '',
           first_rougher_action: '',
@@ -661,37 +654,6 @@ const ToolChangeForm = () => {
               <option value="Porous">Porous</option>
               <option value="Hard Spots">Hard Spots</option>
             </select>
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Insert Failure Mode
-            </label>
-            <select
-              name="insert_failure_mode"
-              value={formData.insert_failure_mode}
-              onChange={handleInputChange}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-yellow-500"
-            >
-              <option value="">Select failure mode</option>
-              <option value="Normal Wear">Normal Wear</option>
-              <option value="Edge Chipping">Edge Chipping</option>
-              <option value="Sudden Fracture">Sudden Fracture</option>
-              <option value="Crater Wear">Crater Wear</option>
-              <option value="Built-up Edge">Built-up Edge</option>
-            </select>
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Operator Observations
-            </label>
-            <textarea
-              name="operator_observations"
-              value={formData.operator_observations}
-              onChange={handleInputChange}
-              rows="2"
-              placeholder="Any observations about material or cutting conditions..."
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-yellow-500"
-            />
           </div>
         </div>
       </div>
