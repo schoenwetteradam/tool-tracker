@@ -76,118 +76,27 @@ const ToolChangeForm = () => {
 
   useEffect(() => {
     calculateCostSummary();
-  }, [formData.old_first_rougher, formData.new_first_rougher, formData.old_finish_tool, formData.new_finish_tool, availableTools]);
+  }, [formData.new_first_rougher, formData.first_rougher_action, formData.new_finish_tool, formData.finish_tool_action]);
 
   const fetchToolInventory = async () => {
+    setToolsLoading(true);
     try {
-      setToolsLoading(true);
-      
-      // Updated to use supabase client directly
-      const { createClient } = await import('@supabase/supabase-js');
-      const supabase = createClient(
-        process.env.NEXT_PUBLIC_SUPABASE_URL,
-        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
-      );
-
-      const { data: toolData, error } = await supabase
-        .from('tool_inventory_enhanced')
-        .select(`
-          id,
-          material_id,
-          description,
-          insert_type,
-          insert_geometry,
-          insert_grade,
-          supplier_id,
-          supplier_name,
-          unit_cost,
-          quantity_on_hand,
-          min_quantity,
-          max_quantity,
-          active,
-          nose_radius,
-          coating,
-          lead_time_days
-        `)
-        .eq('active', true)
-        .order('insert_type', { ascending: true })
-        .order('insert_geometry', { ascending: true })
-        .order('insert_grade', { ascending: true });
-
-      if (error) {
-        console.error('Supabase error:', error);
-        throw error;
-      }
-
-      // Process and categorize tools
-      const processedTools = toolData || [];
-      
-      const roughingTools = processedTools.filter(tool => 
-        tool.insert_type === 'ROUGHING' || 
-        tool.description?.toLowerCase().includes('rough') ||
-        tool.insert_grade?.includes('4235') ||
-        tool.insert_grade?.includes('4335')
-      );
-
-      const finishingTools = processedTools.filter(tool => 
-        tool.insert_type === 'FINISHING' || 
-        tool.description?.toLowerCase().includes('finish') ||
-        tool.insert_grade?.includes('2220') ||
-        tool.insert_grade?.includes('MP')
-      );
-
-      setAvailableTools({
-        roughing: roughingTools,
-        finishing: finishingTools,
-        all: processedTools
-      });
-
-    } catch (error) {
-      console.error('Error fetching tool inventory:', error);
-      
-      // Fallback data based on your sample
+      // Simulated tool inventory data
       const fallbackData = [
         {
-          id: '5',
-          material_id: '11-00529',
-          description: 'INSERT SNMG 643 MR 4235',
-          insert_type: 'ROUGHING',
-          insert_geometry: 'SNMG',
-          insert_grade: '4235',
-          supplier_name: 'BEST ENGINEERING LLC',
-          unit_cost: 16.35,
-          quantity_on_hand: 100,
-          min_quantity: 50,
-          active: true,
-          lead_time_days: 14
+          id: 1, material_id: '11-00529', insert_geometry: 'SNMG 4235', insert_grade: '', 
+          insert_type: 'ROUGHING', quantity_on_hand: 100, min_quantity: 25, unit_cost: 16.35,
+          supplier_name: 'Sandvik'
         },
         {
-          id: '6',
-          material_id: '11-00529',
-          description: 'INSERT SNMG 643 MR 4335',
-          insert_type: 'ROUGHING',
-          insert_geometry: 'SNMG',
-          insert_grade: '4335',
-          supplier_name: 'BEST ENGINEERING LLC',
-          unit_cost: 16.35,
-          quantity_on_hand: 100,
-          min_quantity: 50,
-          active: true,
-          lead_time_days: 14
+          id: 2, material_id: '11-00529', insert_geometry: 'SNMG 4335', insert_grade: '', 
+          insert_type: 'ROUGHING', quantity_on_hand: 100, min_quantity: 25, unit_cost: 16.35,
+          supplier_name: 'Sandvik'
         },
         {
-          id: '7',
-          material_id: '11-00025',
-          description: 'INSERT SNMG 643-MM 2220',
-          insert_type: 'FINISHING',
-          insert_geometry: 'SNMG',
-          insert_grade: '2220',
-          supplier_name: 'BEST ENGINEERING LLC',
-          unit_cost: 16.71,
-          quantity_on_hand: 75,
-          min_quantity: 30,
-          active: true,
-          lead_time_days: 14
+          id: 3, material_id: '11-00025', insert_geometry: 'SNMG 2220', insert_grade: '', 
+          insert_type: 'FINISHING', quantity_on_hand: 75, min_quantity: 20, unit_cost: 16.71,
+          supplier_name: 'Kennametal'
         }
       ];
 
@@ -297,22 +206,55 @@ const ToolChangeForm = () => {
     return null;
   };
 
+  // UPDATED VALIDATION LOGIC - MAKING TOOL FIELDS CONDITIONAL
+  const validateForm = () => {
+    const baseRequiredFields = [
+      'date', 'time', 'shift', 'operator', 'work_center', 'equipment_number',
+      'operation', 'part_number', 'change_reason', 'heat_number'
+    ];
+
+    let missingFields = baseRequiredFields.filter(field => !formData[field]);
+    let validationErrors = [];
+
+    // Check if at least one tool type is being changed
+    const isRougherChange = formData.old_first_rougher || formData.new_first_rougher || formData.first_rougher_action;
+    const isFinisherChange = formData.old_finish_tool || formData.new_finish_tool || formData.finish_tool_action;
+
+    if (!isRougherChange && !isFinisherChange) {
+      validationErrors.push('Must specify changes for at least one tool type (Rougher OR Finisher)');
+    }
+
+    // Validate rougher fields if any rougher field is filled
+    if (isRougherChange) {
+      if (!formData.old_first_rougher) validationErrors.push('Current First Rougher is required when making rougher changes');
+      if (!formData.new_first_rougher) validationErrors.push('New First Rougher is required when making rougher changes');
+      if (!formData.first_rougher_action) validationErrors.push('Rougher Action is required when making rougher changes');
+    }
+
+    // Validate finisher fields if any finisher field is filled
+    if (isFinisherChange) {
+      if (!formData.old_finish_tool) validationErrors.push('Current Finish Tool is required when making finisher changes');
+      if (!formData.new_finish_tool) validationErrors.push('New Finish Tool is required when making finisher changes');
+      if (!formData.finish_tool_action) validationErrors.push('Finish Action is required when making finisher changes');
+    }
+
+    return {
+      isValid: missingFields.length === 0 && validationErrors.length === 0,
+      missingFields,
+      validationErrors: [...validationErrors]
+    };
+  };
+
   const handleSubmit = async () => {
     setIsSubmitting(true);
     setSubmitStatus(null);
 
     try {
-      const requiredFields = [
-        'date', 'time', 'shift', 'operator', 'work_center', 'equipment_number',
-        'operation', 'part_number', 'old_first_rougher', 'new_first_rougher',
-        'first_rougher_action', 'old_finish_tool', 'new_finish_tool',
-        'finish_tool_action', 'change_reason', 'heat_number'
-      ];
+      const validation = validateForm();
 
-      const missingFields = requiredFields.filter(field => !formData[field]);
-
-      if (missingFields.length > 0) {
-        throw new Error(`Missing required fields: ${missingFields.join(', ')}`);
+      if (!validation.isValid) {
+        const allErrors = [...validation.missingFields.map(f => `Missing: ${f}`), ...validation.validationErrors];
+        throw new Error(allErrors.join(', '));
       }
 
       // Get tool details for enhanced data
@@ -436,6 +378,12 @@ const ToolChangeForm = () => {
           <span>🔧 Roughing: {availableTools.roughing.length}</span>
           <span>✨ Finishing: {availableTools.finishing.length}</span>
         </div>
+        <div className="mt-3 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
+          <p className="text-sm text-yellow-800">
+            <strong>Note:</strong> You can change either Rougher tools OR Finisher tools or both. 
+            Fill out only the sections for tools you're actually changing.
+          </p>
+        </div>
       </div>
 
       {/* Cost Summary Panel */}
@@ -480,7 +428,7 @@ const ToolChangeForm = () => {
           <div className="flex items-center">
             <AlertTriangle className="h-5 w-5 text-red-600 mr-2" />
             <span className="text-red-800 font-medium">
-              Error saving tool change. Please check required fields.
+              Error saving tool change. Please check required fields and ensure at least one tool type is specified.
             </span>
           </div>
         </div>
@@ -540,15 +488,15 @@ const ToolChangeForm = () => {
       </div>
 
       {/* Operator Information Section */}
-      <div className="bg-green-50 p-6 rounded-lg mb-6">
-        <h2 className="text-xl font-semibold text-green-900 mb-4 flex items-center">
+      <div className="bg-purple-50 p-6 rounded-lg mb-6">
+        <h2 className="text-xl font-semibold text-purple-900 mb-4 flex items-center">
           <User className="mr-2" size={20} />
           Operator Information
         </h2>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
-              Operator Name <span className="text-red-500">*</span>
+              Operator <span className="text-red-500">*</span>
             </label>
             <input
               type="text"
@@ -557,32 +505,9 @@ const ToolChangeForm = () => {
               onChange={handleInputChange}
               required
               placeholder="Enter operator name"
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500"
             />
           </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Clock Number
-            </label>
-            <input
-              type="text"
-              name="operator_clock_number"
-              value={formData.operator_clock_number}
-              onChange={handleInputChange}
-              placeholder="Enter clock number"
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
-            />
-          </div>
-        </div>
-      </div>
-
-      {/* Equipment Information Section */}
-      <div className="bg-purple-50 p-6 rounded-lg mb-6">
-        <h2 className="text-xl font-semibold text-purple-900 mb-4 flex items-center">
-          <Wrench className="mr-2" size={20} />
-          Equipment & Job Information
-        </h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
               Work Center <span className="text-red-500">*</span>
@@ -642,6 +567,19 @@ const ToolChangeForm = () => {
               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500"
             />
           </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Job Number
+            </label>
+            <input
+              type="text"
+              name="job_number"
+              value={formData.job_number}
+              onChange={handleInputChange}
+              placeholder="Enter job number (optional)"
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500"
+            />
+          </div>
         </div>
       </div>
 
@@ -649,22 +587,21 @@ const ToolChangeForm = () => {
       <div className="bg-orange-50 p-6 rounded-lg mb-6">
         <h2 className="text-xl font-semibold text-orange-900 mb-4 flex items-center">
           <Package className="mr-2" size={20} />
-          Professional Tool Selection
+          Tool Selection (Choose One or Both)
         </h2>
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
           {/* First Rougher Section */}
           <div className="space-y-4">
-            <h3 className="text-lg font-medium text-gray-800 border-b pb-2">First Rougher</h3>
+            <h3 className="text-lg font-medium text-gray-800 border-b pb-2">First Rougher (Optional)</h3>
             
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                Current First Rougher <span className="text-red-500">*</span>
+                Current First Rougher
               </label>
               <select
                 name="old_first_rougher"
                 value={formData.old_first_rougher}
                 onChange={handleInputChange}
-                required
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500"
               >
                 <option value="">Select current roughing tool</option>
@@ -686,16 +623,10 @@ const ToolChangeForm = () => {
                   {(() => {
                     const tool = getToolDetails(formData.old_first_rougher);
                     return tool ? (
-                      <div className="space-y-1">
-                        <div className="flex items-center justify-between">
-                          <span className="font-medium">{tool.material_id} - {tool.description}</span>
-                          <span className="text-red-700 font-bold">${tool.unit_cost}/ea</span>
-                        </div>
-                        <div className="flex items-center gap-4 text-xs text-gray-600">
-                          <span>Stock: {tool.quantity_on_hand}</span>
-                          <span>Supplier: {tool.supplier_name}</span>
-                          <span>Lead Time: {tool.lead_time_days} days</span>
-                        </div>
+                      <div>
+                        <strong>Removing:</strong> {tool.material_id} - Cost: ${tool.unit_cost}/ea
+                        <br />
+                        <strong>Supplier:</strong> {tool.supplier_name}
                       </div>
                     ) : null;
                   })()}
@@ -705,14 +636,13 @@ const ToolChangeForm = () => {
 
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                New First Rougher <span className="text-red-500">*</span>
+                New First Rougher
               </label>
               <select
                 name="new_first_rougher"
                 value={formData.new_first_rougher}
                 onChange={handleInputChange}
-                required
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500"
               >
                 <option value="">Select replacement roughing tool</option>
                 {Object.entries(groupedRoughingTools).map(([geometry, tools]) => (
@@ -721,9 +651,6 @@ const ToolChangeForm = () => {
                       <option 
                         key={tool.id} 
                         value={tool.id}
-                        disabled={getStockStatus(tool) === 'out-of-stock'}
-                        className={getStockStatus(tool) === 'out-of-stock' ? 'text-red-500' : 
-                                  getStockStatus(tool) === 'low-stock' ? 'text-yellow-600' : ''}
                       >
                         {formatToolOption(tool)} - ${tool.unit_cost}/ea
                       </option>
@@ -736,24 +663,12 @@ const ToolChangeForm = () => {
                   {(() => {
                     const tool = getToolDetails(formData.new_first_rougher);
                     return tool ? (
-                      <div className="space-y-1">
-                        <div className="flex items-center justify-between">
-                          <span className="font-medium">{tool.material_id} - {tool.description}</span>
-                          <span className="text-green-700 font-bold">${tool.unit_cost}/ea</span>
-                        </div>
-                        <div className="flex items-center gap-4 text-xs text-gray-600">
-                          <span className={`font-medium ${getStockStatus(tool) === 'low-stock' ? 'text-yellow-600' : 'text-green-600'}`}>
-                            Stock: {tool.quantity_on_hand} {getStockIcon(getStockStatus(tool))}
-                          </span>
-                          <span>Supplier: {tool.supplier_name}</span>
-                          <span>Lead Time: {tool.lead_time_days} days</span>
-                        </div>
-                        {getStockStatus(tool) === 'low-stock' && (
-                          <div className="flex items-center gap-1 text-yellow-700 bg-yellow-100 px-2 py-1 rounded">
-                            <AlertTriangle size={12} />
-                            <span className="text-xs">Low stock - Consider reordering</span>
-                          </div>
-                        )}
+                      <div>
+                        <strong>Installing:</strong> {tool.material_id} - Cost: ${tool.unit_cost}/ea
+                        <br />
+                        <strong>Supplier:</strong> {tool.supplier_name}
+                        <br />
+                        <strong>Stock:</strong> {tool.quantity_on_hand} available {getStockIcon(getStockStatus(tool))}
                       </div>
                     ) : null;
                   })()}
@@ -763,13 +678,12 @@ const ToolChangeForm = () => {
 
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                Rougher Action <span className="text-red-500">*</span>
+                Rougher Action
               </label>
               <select
                 name="first_rougher_action"
                 value={formData.first_rougher_action}
                 onChange={handleInputChange}
-                required
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500"
               >
                 <option value="">Select action</option>
@@ -782,17 +696,16 @@ const ToolChangeForm = () => {
 
           {/* Finish Tool Section */}
           <div className="space-y-4">
-            <h3 className="text-lg font-medium text-gray-800 border-b pb-2">Finish Tool</h3>
+            <h3 className="text-lg font-medium text-gray-800 border-b pb-2">Finish Tool (Optional)</h3>
             
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                Current Finish Tool <span className="text-red-500">*</span>
+                Current Finish Tool
               </label>
               <select
                 name="old_finish_tool"
                 value={formData.old_finish_tool}
                 onChange={handleInputChange}
-                required
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500"
               >
                 <option value="">Select current finishing tool</option>
@@ -814,16 +727,10 @@ const ToolChangeForm = () => {
                   {(() => {
                     const tool = getToolDetails(formData.old_finish_tool);
                     return tool ? (
-                      <div className="space-y-1">
-                        <div className="flex items-center justify-between">
-                          <span className="font-medium">{tool.material_id} - {tool.description}</span>
-                          <span className="text-red-700 font-bold">${tool.unit_cost}/ea</span>
-                        </div>
-                        <div className="flex items-center gap-4 text-xs text-gray-600">
-                          <span>Stock: {tool.quantity_on_hand}</span>
-                          <span>Supplier: {tool.supplier_name}</span>
-                          <span>Lead Time: {tool.lead_time_days} days</span>
-                        </div>
+                      <div>
+                        <strong>Removing:</strong> {tool.material_id} - Cost: ${tool.unit_cost}/ea
+                        <br />
+                        <strong>Supplier:</strong> {tool.supplier_name}
                       </div>
                     ) : null;
                   })()}
@@ -833,14 +740,13 @@ const ToolChangeForm = () => {
 
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                New Finish Tool <span className="text-red-500">*</span>
+                New Finish Tool
               </label>
               <select
                 name="new_finish_tool"
                 value={formData.new_finish_tool}
                 onChange={handleInputChange}
-                required
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500"
               >
                 <option value="">Select replacement finishing tool</option>
                 {Object.entries(groupedFinishingTools).map(([geometry, tools]) => (
@@ -849,9 +755,6 @@ const ToolChangeForm = () => {
                       <option 
                         key={tool.id} 
                         value={tool.id}
-                        disabled={getStockStatus(tool) === 'out-of-stock'}
-                        className={getStockStatus(tool) === 'out-of-stock' ? 'text-red-500' : 
-                                  getStockStatus(tool) === 'low-stock' ? 'text-yellow-600' : ''}
                       >
                         {formatToolOption(tool)} - ${tool.unit_cost}/ea
                       </option>
@@ -864,24 +767,12 @@ const ToolChangeForm = () => {
                   {(() => {
                     const tool = getToolDetails(formData.new_finish_tool);
                     return tool ? (
-                      <div className="space-y-1">
-                        <div className="flex items-center justify-between">
-                          <span className="font-medium">{tool.material_id} - {tool.description}</span>
-                          <span className="text-green-700 font-bold">${tool.unit_cost}/ea</span>
-                        </div>
-                        <div className="flex items-center gap-4 text-xs text-gray-600">
-                          <span className={`font-medium ${getStockStatus(tool) === 'low-stock' ? 'text-yellow-600' : 'text-green-600'}`}>
-                            Stock: {tool.quantity_on_hand} {getStockIcon(getStockStatus(tool))}
-                          </span>
-                          <span>Supplier: {tool.supplier_name}</span>
-                          <span>Lead Time: {tool.lead_time_days} days</span>
-                        </div>
-                        {getStockStatus(tool) === 'low-stock' && (
-                          <div className="flex items-center gap-1 text-yellow-700 bg-yellow-100 px-2 py-1 rounded">
-                            <AlertTriangle size={12} />
-                            <span className="text-xs">Low stock - Consider reordering</span>
-                          </div>
-                        )}
+                      <div>
+                        <strong>Installing:</strong> {tool.material_id} - Cost: ${tool.unit_cost}/ea
+                        <br />
+                        <strong>Supplier:</strong> {tool.supplier_name}
+                        <br />
+                        <strong>Stock:</strong> {tool.quantity_on_hand} available {getStockIcon(getStockStatus(tool))}
                       </div>
                     ) : null;
                   })()}
@@ -891,13 +782,12 @@ const ToolChangeForm = () => {
 
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                Finish Action <span className="text-red-500">*</span>
+                Finish Action
               </label>
               <select
                 name="finish_tool_action"
                 value={formData.finish_tool_action}
                 onChange={handleInputChange}
-                required
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500"
               >
                 <option value="">Select action</option>
@@ -912,10 +802,11 @@ const ToolChangeForm = () => {
 
       {/* Material Information Section */}
       <div className="bg-yellow-50 p-6 rounded-lg mb-6">
-        <h2 className="text-xl font-semibold text-yellow-900 mb-4">
-          Material & Diagnostic Information
+        <h2 className="text-xl font-semibold text-yellow-900 mb-4 flex items-center">
+          <TrendingUp className="mr-2" size={20} />
+          Material & Process Information
         </h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
               Heat Number <span className="text-red-500">*</span>
@@ -941,21 +832,12 @@ const ToolChangeForm = () => {
               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-yellow-500"
             >
               <option value="Normal">Normal</option>
-              <option value="Discolored">Discolored</option>
-              <option value="Cracked">Cracked</option>
-              <option value="Porous">Porous</option>
-              <option value="Hard Spots">Hard Spots</option>
+              <option value="Hard spots">Hard spots</option>
+              <option value="Inclusions">Inclusions</option>
+              <option value="Surface defects">Surface defects</option>
+              <option value="Poor machinability">Poor machinability</option>
             </select>
           </div>
-        </div>
-      </div>
-
-      {/* Change Reason & Notes Section */}
-      <div className="bg-gray-50 p-6 rounded-lg mb-6">
-        <h2 className="text-xl font-semibold text-gray-900 mb-4">
-          Change Reason & Notes
-        </h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
               Change Reason <span className="text-red-500">*</span>
@@ -965,126 +847,52 @@ const ToolChangeForm = () => {
               value={formData.change_reason}
               onChange={handleInputChange}
               required
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-gray-500"
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-yellow-500"
             >
               <option value="">Select reason</option>
-              <option value="Normal Wear">Normal Wear</option>
+              <option value="Normal wear">Normal wear</option>
               <option value="Tool Breakage">Tool Breakage</option>
               <option value="Chipped Edge">Chipped Edge</option>
-              <option value="Poor Finish">Poor Finish</option>
-              <option value="Size Issues">Size Issues</option>
-              <option value="Scheduled Change">Scheduled Change</option>
+              <option value="Poor finish">Poor finish</option>
+              <option value="Size problems">Size problems</option>
+              <option value="Scheduled maintenance">Scheduled maintenance</option>
             </select>
           </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Additional Notes
-            </label>
-            <textarea
-              name="notes"
-              value={formData.notes}
-              onChange={handleInputChange}
-              rows="3"
-              placeholder="Any additional observations or context..."
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-gray-500"
-            />
-          </div>
         </div>
-      </div>
-
-      {/* Enhanced Risk & ROI Analysis */}
-      {formData.heat_number && (
-        <div className="bg-indigo-50 p-4 rounded-lg mb-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <h3 className="text-lg font-medium text-indigo-900">Material Risk & Cost Analysis</h3>
-              <div className="mt-2 space-y-1">
-                <p className="text-sm text-indigo-700">
-                  Material Risk Score: <span className="font-bold">{calculateMaterialRiskScore()}/10</span>
-                </p>
-                <p className="text-sm text-indigo-700">
-                  Total Tool Investment: <span className="font-bold">${costSummary.totalCost.toFixed(2)}</span>
-                </p>
-                {estimateCastingDate(formData.heat_number) && (
-                  <p className="text-sm text-indigo-700">
-                    Estimated Casting: <span className="font-bold">{estimateCastingDate(formData.heat_number)}</span>
-                  </p>
-                )}
-              </div>
-            </div>
-            <div className="text-right">
-              <TrendingUp className={`h-8 w-8 ${calculateMaterialRiskScore() >= 5 ? 'text-red-500' : 'text-green-500'}`} />
-              <div className="text-xs text-indigo-600 mt-1">
-                <Truck className="inline mr-1" size={12} />
-                Lead Time Analysis
-              </div>
-            </div>
-          </div>
-          {calculateMaterialRiskScore() >= 5 && (
-            <div className="mt-3 p-3 bg-red-100 border border-red-200 rounded text-sm text-red-800">
-              <strong>⚠️ High Risk Material Detected:</strong> Consider additional quality checks, slower speeds, and monitoring tool wear more frequently.
-            </div>
-          )}
-          {costSummary.totalCost > 50 && (
-            <div className="mt-3 p-3 bg-blue-100 border border-blue-200 rounded text-sm text-blue-800">
-              <strong>💰 High Value Tool Change:</strong> Document performance carefully for ROI analysis. Total cost represents significant investment in quality.
-            </div>
-          )}
-        </div>
-      )}
-
-      {/* Professional Stock Status Legend */}
-      <div className="bg-white border border-gray-200 rounded-lg p-4 mb-6">
-        <h3 className="text-sm font-semibold text-gray-900 mb-2">Stock Status Legend</h3>
-        <div className="flex flex-wrap gap-4 text-xs">
-          <div className="flex items-center gap-1">
-            <span className="text-green-600">✅</span>
-            <span>In Stock - Normal availability</span>
-          </div>
-          <div className="flex items-center gap-1">
-            <span className="text-yellow-600">⚠️</span>
-            <span>Low Stock - At or below minimum</span>
-          </div>
-          <div className="flex items-center gap-1">
-            <span className="text-red-600">❌</span>
-            <span>Out of Stock - Cannot select</span>
-          </div>
-          <div className="flex items-center gap-1">
-            <span className="text-blue-600">📊</span>
-            <span>Real-time inventory from tool_inventory_enhanced</span>
-          </div>
+        <div className="mt-4">
+          <label className="block text-sm font-medium text-gray-700 mb-1">
+            Additional Notes
+          </label>
+          <textarea
+            name="notes"
+            value={formData.notes}
+            onChange={handleInputChange}
+            rows={3}
+            placeholder="Enter any additional observations or notes..."
+            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-yellow-500"
+          />
         </div>
       </div>
 
       {/* Submit Button */}
-      <div className="flex justify-center">
+      <div className="flex justify-end">
         <button
           onClick={handleSubmit}
           disabled={isSubmitting}
-          className={`flex items-center space-x-2 px-8 py-3 rounded-lg font-medium text-white transition-colors ${
-            isSubmitting
-              ? 'bg-gray-400 cursor-not-allowed'
-              : 'bg-blue-600 hover:bg-blue-700 focus:ring-2 focus:ring-blue-500'
-          }`}
+          className="flex items-center px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-200"
         >
           {isSubmitting ? (
             <>
-              <RefreshCw className="animate-spin" size={20} />
-              <span>Saving Enhanced Data...</span>
+              <RefreshCw className="animate-spin mr-2" size={20} />
+              Saving...
             </>
           ) : (
             <>
-              <Save size={20} />
-              <span>Save Professional Tool Change Record</span>
+              <Save className="mr-2" size={20} />
+              Save Tool Change
             </>
           )}
         </button>
-      </div>
-
-      {/* Development Footer */}
-      <div className="mt-8 text-center text-xs text-gray-500 border-t pt-4">
-        <p>Enhanced Tool Change Form v2.0 | Equipment 1254 - LeBlond 4GSR-137 (Bore) | Professional Manufacturing Data Collection</p>
-        <p className="mt-1">ROI-focused tool tracking with real-time inventory integration | Work Center 1254 Default Configuration</p>
       </div>
     </div>
   );
