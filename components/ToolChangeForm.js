@@ -1,4 +1,4 @@
-// components/ToolChangeForm.js - Complete fixed form with integrated insert dropdowns
+// components/ToolChangeForm.js - Corrected form with integrated insert dropdowns
 import React, { useState, useEffect } from 'react';
 import {
   Clock,
@@ -124,175 +124,7 @@ const ToolChangeForm = () => {
   const formatInsertOption = (insert) => {
     const stockStatus = getStockStatus(insert);
     const stockText = stockStatus === 'out-of-stock' ? ' (OUT OF STOCK)' : 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Old Finish Tool <span className="text-red-500">*</span>
-              </label>
-              <select
-                name="old_finish_tool"
-                value={formData.old_finish_tool}
-                onChange={handleInputChange}
-                required
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-red-500"
-              >
-                <option value="">Select current insert</option>
-                {availableInserts.finishing.map(insert => (
-                  <option 
-                    key={insert.full_insert_id} 
-                    value={insert.full_insert_id}
-                    disabled={getStockStatus(insert) === 'out-of-stock'}
-                  >
-                    {formatInsertOption(insert)}
-                  </option>
-                ))}
-              </select>
-              {formData.old_finish_tool && (
-                <div className="mt-2 p-2 bg-blue-50 rounded text-sm">
-                  {(() => {
-                    const insert = getInsertDetails(formData.old_finish_tool, 'FINISHING');
-                    return insert ? (
-                      <div className="flex items-center gap-2">
-                        <CheckCircle className={`w-4 h-4 ${getStockStatus(insert) === 'in-stock' ? 'text-green-500' : 'text-yellow-500'}`} />
-                        <span>Stock: {insert.quantity_on_hand} | Cost: ${insert.unit_cost}/ea</span>
-                      </div>
-                    ) : null;
-                  })()}
-                </div>
-              )}
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                New Finish Tool <span className="text-red-500">*</span>
-              </label>
-              <select
-                name="new_finish_tool"
-                value={formData.new_finish_tool}
-                onChange={handleInputChange}
-                required
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-red-500"
-              >
-                <option value="">Select replacement insert</option>
-                {availableInserts.finishing.map(insert => (
-                  <option 
-                    key={insert.full_insert_id} 
-                    value={insert.full_insert_id}
-                    disabled={getStockStatus(insert) === 'out-of-stock'}
-                  >
-                    {formatInsertOption(insert)}
-                  </option>
-                ))}
-              </select>
-              {formData.new_finish_tool && (
-                <div className="mt-2 p-2 bg-blue-50 rounded text-sm">
-                  {(() => {
-                    const insert = getInsertDetails(formData.new_finish_tool, 'FINISHING');
-                    return insert ? (
-                      <div className="flex items-center gap-2">
-                        <CheckCircle className={`w-4 h-4 ${getStockStatus(insert) === 'in-stock' ? 'text-green-500' : 'text-yellow-500'}`} />
-                        <span>Stock: {insert.quantity_on_hand} | Cost: ${insert.unit_cost}/ea</span>
-                      </div>
-                    ) : null;
-                  })()}
-                </div>
-              )}
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Finish Tool Action <span className="text-red-500">*</span>
-              </label>
-              <select
-                name="finish_tool_action"
-                value={formData.finish_tool_action}
-                onChange={handleInputChange}
-                required
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-red-500"
-              >
-                <option value="">Select action</option>
-                <option value="new">New Insert</option>
-                <option value="turn">Turn Insert</option>
-                <option value="none">No Change</option>
-              </select>
-            </div>
-          </div>
-        </div>
-
-        {/* Change Reason */}
-        <div className="bg-gray-50 p-6 rounded-lg mb-6">
-          <h2 className="text-xl font-semibold text-gray-900 mb-4">
-            Change Reason & Notes
-          </h2>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Change Reason <span className="text-red-500">*</span>
-              </label>
-              <select
-                name="change_reason"
-                value={formData.change_reason}
-                onChange={handleInputChange}
-                required
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-gray-500"
-              >
-                <option value="">Select reason</option>
-                <option value="Normal Wear">Normal Wear</option>
-                <option value="Tool Breakage">Tool Breakage</option>
-                <option value="Chipped Edge">Chipped Edge</option>
-                <option value="Poor Finish">Poor Finish</option>
-                <option value="Size Issues">Size Issues</option>
-                <option value="Scheduled Change">Scheduled Change</option>
-              </select>
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Additional Notes
-              </label>
-              <textarea
-                name="notes"
-                value={formData.notes}
-                onChange={handleInputChange}
-                rows="3"
-                placeholder="Any additional observations or context..."
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-gray-500"
-              />
-            </div>
-          </div>
-        </div>
-
-        {/* Submit Button */}
-        <div className="flex justify-center">
-          <button
-            onClick={handleSubmit}
-            disabled={isSubmitting}
-            className={`flex items-center space-x-2 px-8 py-3 rounded-lg font-medium text-white transition-colors ${
-              isSubmitting
-                ? 'bg-gray-400 cursor-not-allowed'
-                : 'bg-blue-600 hover:bg-blue-700 focus:ring-2 focus:ring-blue-500'
-            }`}
-          >
-            {isSubmitting ? (
-              <>
-                <RefreshCw className="animate-spin" size={20} />
-                <span>Saving Diagnostic Data...</span>
-              </>
-            ) : (
-              <>
-                <Save size={20} />
-                <span>Save Tool Change with Diagnostics</span>
-              </>
-            )}
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-};
-
-export default ToolChangeForm;           stockStatus === 'low-stock' ? ' (LOW STOCK)' : '';
+                     stockStatus === 'low-stock' ? ' (LOW STOCK)' : '';
     return `${insert.full_insert_id} - ${insert.description}${stockText}`;
   };
 
@@ -545,7 +377,185 @@ export default ToolChangeForm;           stockStatus === 'low-stock' ? ' (LOW ST
                 value={formData.date}
                 onChange={handleInputChange}
                 required
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-red-500"
+              >
+                <option value="">Select action</option>
+                <option value="new">New Insert</option>
+                <option value="turn">Turn Insert</option>
+                <option value="none">No Change</option>
+              </select>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Old Finish Tool <span className="text-red-500">*</span>
+              </label>
+              <select
+                name="old_finish_tool"
+                value={formData.old_finish_tool}
+                onChange={handleInputChange}
+                required
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-red-500"
+              >
+                <option value="">Select current insert</option>
+                {availableInserts.finishing.map(insert => (
+                  <option 
+                    key={insert.full_insert_id} 
+                    value={insert.full_insert_id}
+                    disabled={getStockStatus(insert) === 'out-of-stock'}
+                  >
+                    {formatInsertOption(insert)}
+                  </option>
+                ))}
+              </select>
+              {formData.old_finish_tool && (
+                <div className="mt-2 p-2 bg-blue-50 rounded text-sm">
+                  {(() => {
+                    const insert = getInsertDetails(formData.old_finish_tool, 'FINISHING');
+                    return insert ? (
+                      <div className="flex items-center gap-2">
+                        <CheckCircle className={`w-4 h-4 ${getStockStatus(insert) === 'in-stock' ? 'text-green-500' : 'text-yellow-500'}`} />
+                        <span>Stock: {insert.quantity_on_hand} | Cost: ${insert.unit_cost}/ea</span>
+                      </div>
+                    ) : null;
+                  })()}
+                </div>
+              )}
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                New Finish Tool <span className="text-red-500">*</span>
+              </label>
+              <select
+                name="new_finish_tool"
+                value={formData.new_finish_tool}
+                onChange={handleInputChange}
+                required
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-red-500"
+              >
+                <option value="">Select replacement insert</option>
+                {availableInserts.finishing.map(insert => (
+                  <option 
+                    key={insert.full_insert_id} 
+                    value={insert.full_insert_id}
+                    disabled={getStockStatus(insert) === 'out-of-stock'}
+                  >
+                    {formatInsertOption(insert)}
+                  </option>
+                ))}
+              </select>
+              {formData.new_finish_tool && (
+                <div className="mt-2 p-2 bg-blue-50 rounded text-sm">
+                  {(() => {
+                    const insert = getInsertDetails(formData.new_finish_tool, 'FINISHING');
+                    return insert ? (
+                      <div className="flex items-center gap-2">
+                        <CheckCircle className={`w-4 h-4 ${getStockStatus(insert) === 'in-stock' ? 'text-green-500' : 'text-yellow-500'}`} />
+                        <span>Stock: {insert.quantity_on_hand} | Cost: ${insert.unit_cost}/ea</span>
+                      </div>
+                    ) : null;
+                  })()}
+                </div>
+              )}
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Finish Tool Action <span className="text-red-500">*</span>
+              </label>
+              <select
+                name="finish_tool_action"
+                value={formData.finish_tool_action}
+                onChange={handleInputChange}
+                required
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-red-500"
+              >
+                <option value="">Select action</option>
+                <option value="new">New Insert</option>
+                <option value="turn">Turn Insert</option>
+                <option value="none">No Change</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        {/* Change Reason */}
+        <div className="bg-gray-50 p-6 rounded-lg mb-6">
+          <h2 className="text-xl font-semibold text-gray-900 mb-4">
+            Change Reason & Notes
+          </h2>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Change Reason <span className="text-red-500">*</span>
+              </label>
+              <select
+                name="change_reason"
+                value={formData.change_reason}
+                onChange={handleInputChange}
+                required
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-gray-500"
+              >
+                <option value="">Select reason</option>
+                <option value="Normal Wear">Normal Wear</option>
+                <option value="Tool Breakage">Tool Breakage</option>
+                <option value="Chipped Edge">Chipped Edge</option>
+                <option value="Poor Finish">Poor Finish</option>
+                <option value="Size Issues">Size Issues</option>
+                <option value="Scheduled Change">Scheduled Change</option>
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Additional Notes
+              </label>
+              <textarea
+                name="notes"
+                value={formData.notes}
+                onChange={handleInputChange}
+                rows="3"
+                placeholder="Any additional observations or context..."
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-gray-500"
+              />
+            </div>
+          </div>
+        </div>
+
+        {/* Submit Button */}
+        <div className="flex justify-center">
+          <button
+            onClick={handleSubmit}
+            disabled={isSubmitting}
+            className={`flex items-center space-x-2 px-8 py-3 rounded-lg font-medium text-white transition-colors ${
+              isSubmitting
+                ? 'bg-gray-400 cursor-not-allowed'
+                : 'bg-blue-600 hover:bg-blue-700 focus:ring-2 focus:ring-blue-500'
+            }`}
+          >
+            {isSubmitting ? (
+              <>
+                <RefreshCw className="animate-spin" size={20} />
+                <span>Saving Diagnostic Data...</span>
+              </>
+            ) : (
+              <>
+                <Save size={20} />
+                <span>Save Tool Change with Diagnostics</span>
+              </>
+            )}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default ToolChangeForm;:outline-none focus:ring-2 focus:ring-blue-500"
               />
             </div>
 
@@ -911,12 +921,4 @@ export default ToolChangeForm;           stockStatus === 'low-stock' ? ' (LOW ST
                 value={formData.first_rougher_action}
                 onChange={handleInputChange}
                 required
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-red-500"
-              >
-                <option value="">Select action</option>
-                <option value="new">New Insert</option>
-                <option value="turn">Turn Insert</option>
-                <option value="none">No Change</option>
-              </select>
-            </div>
-          </div>
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus
