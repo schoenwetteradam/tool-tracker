@@ -1083,8 +1083,8 @@ const ToolChangeForm = () => {
 
       {/* Development Footer */}
       <div className="mt-8 text-center text-xs text-gray-500 border-t pt-4">
-        <p>Enhanced Tool Change Form v2.0 | Connected to tool_inventory_enhanced | Professional Manufacturing Data Collection</p>
-        <p className="mt-1">ROI-focused tool tracking with real-time inventory integration</p>
+        <p>Enhanced Tool Change Form v2.0 | Equipment 1254 - LeBlond 4GSR-137 (Bore) | Professional Manufacturing Data Collection</p>
+        <p className="mt-1">ROI-focused tool tracking with real-time inventory integration | Work Center 1254 Default Configuration</p>
       </div>
     </div>
   );
