@@ -26,13 +26,13 @@ import {
   TrendingUp,
   DollarSign,
   Settings,
-  AlertTriangle,
-  CheckCircle,
   Clock,
   Users,
   Wrench,
   ArrowLeft,
-  RefreshCw
+  RefreshCw,
+  Database,
+  BarChart3
 } from 'lucide-react'
 
 export default function Dashboard() {
@@ -192,6 +192,49 @@ export default function Dashboard() {
       </header>
 
       <div className="max-w-7xl mx-auto px-4 py-8 space-y-8">
+        {/* Quick Stats Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+          <div className="bg-white p-6 rounded-lg shadow-sm border">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-gray-600">Tool Changes Today</p>
+                <p className="text-2xl font-bold text-gray-900">--</p>
+              </div>
+              <TrendingUp className="h-8 w-8 text-blue-600" />
+            </div>
+          </div>
+
+          <div className="bg-white p-6 rounded-lg shadow-sm border">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-gray-600">Active Machines</p>
+                <p className="text-2xl font-bold text-gray-900">--</p>
+              </div>
+              <Settings className="h-8 w-8 text-green-600" />
+            </div>
+          </div>
+
+          <div className="bg-white p-6 rounded-lg shadow-sm border">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-gray-600">Cost Savings</p>
+                <p className="text-2xl font-bold text-gray-900">$--</p>
+              </div>
+              <Database className="h-8 w-8 text-purple-600" />
+            </div>
+          </div>
+
+          <div className="bg-white p-6 rounded-lg shadow-sm border">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-gray-600">Efficiency</p>
+                <p className="text-2xl font-bold text-gray-900">--%</p>
+              </div>
+              <BarChart3 className="h-8 w-8 text-orange-600" />
+            </div>
+          </div>
+        </div>
+
         {/* Key Metrics Cards */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
           <div className="bg-white p-6 rounded-lg shadow-sm border">
