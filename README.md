@@ -13,6 +13,9 @@ A Next.js and Supabase application for recording and analyzing CNC tool changes.
 2. **Environment variables**
    Create a `.env.local` based on `.env.example` with your Supabase credentials.
 
+   If you encounter authorization errors (HTTP 401) when saving a tool change, double-check that `NEXT_PUBLIC_SUPABASE_URL`
+   and `NEXT_PUBLIC_SUPABASE_ANON_KEY` are set correctly and the keys have the necessary permissions.
+
 3. **Run locally**
    ```bash
    npm run dev
