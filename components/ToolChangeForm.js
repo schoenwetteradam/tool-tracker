@@ -136,10 +136,32 @@ const ToolChangeForm = () => {
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
-    setFormData(prev => ({
-      ...prev,
-      [name]: value
-    }));
+    setFormData(prev => {
+      const updated = {
+        ...prev,
+        [name]: value
+      };
+
+      if (name === 'first_rougher_action' && value !== 'Replace') {
+        updated.new_first_rougher = '';
+        updated.first_rougher_change_reason = '';
+      }
+
+      if (name === 'finish_tool_action' && value !== 'Replace') {
+        updated.new_finish_tool = '';
+        updated.finish_tool_change_reason = '';
+      }
+
+      if (name === 'new_first_rougher' && value === '') {
+        updated.first_rougher_change_reason = '';
+      }
+
+      if (name === 'new_finish_tool' && value === '') {
+        updated.finish_tool_change_reason = '';
+      }
+
+      return updated;
+    });
   };
 
   const getStockStatus = (tool) => {
@@ -228,20 +250,24 @@ const ToolChangeForm = () => {
     // Validate rougher fields if any rougher field is filled
     if (isRougherChange) {
       if (!formData.old_first_rougher) validationErrors.push('Current First Rougher is required when making rougher changes');
-      if (!formData.new_first_rougher) validationErrors.push('New First Rougher is required when making rougher changes');
       if (!formData.first_rougher_action) validationErrors.push('Rougher Action is required when making rougher changes');
-      if (formData.old_first_rougher && formData.new_first_rougher && !formData.first_rougher_change_reason) {
-        validationErrors.push('Rougher Change Reason is required when replacing rougher');
+      if (formData.first_rougher_action === 'Replace') {
+        if (!formData.new_first_rougher) validationErrors.push('New First Rougher is required when replacing rougher');
+        if (!formData.first_rougher_change_reason) {
+          validationErrors.push('Rougher Change Reason is required when replacing rougher');
+        }
       }
     }
 
     // Validate finisher fields if any finisher field is filled
     if (isFinisherChange) {
       if (!formData.old_finish_tool) validationErrors.push('Current Finish Tool is required when making finisher changes');
-      if (!formData.new_finish_tool) validationErrors.push('New Finish Tool is required when making finisher changes');
       if (!formData.finish_tool_action) validationErrors.push('Finish Action is required when making finisher changes');
-      if (formData.old_finish_tool && formData.new_finish_tool && !formData.finish_tool_change_reason) {
-        validationErrors.push('Finish Change Reason is required when replacing finisher');
+      if (formData.finish_tool_action === 'Replace') {
+        if (!formData.new_finish_tool) validationErrors.push('New Finish Tool is required when replacing finisher');
+        if (!formData.finish_tool_change_reason) {
+          validationErrors.push('Finish Change Reason is required when replacing finisher');
+        }
       }
     }
 
@@ -658,8 +684,8 @@ const ToolChangeForm = () => {
                   </optgroup>
                 ))}
               </select>
-              {formData.old_first_rougher && (
-                <div className="mt-2 p-3 bg-red-50 border border-red-200 rounded text-sm">
+              {formData.first_rougher_action === 'Replace' && formData.old_first_rougher && formData.new_first_rougher && (
+                <div className="mt-2 p-3 bg-blue-50 border border-blue-200 rounded text-sm">
                   {(() => {
                     const tool = getToolDetails(formData.old_first_rougher);
                     return tool ? (
@@ -682,7 +708,8 @@ const ToolChangeForm = () => {
                 name="new_first_rougher"
                 value={formData.new_first_rougher}
                 onChange={handleInputChange}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500"
+                disabled={formData.first_rougher_action !== 'Replace'}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500 disabled:bg-gray-100"
               >
                 <option value="">Select replacement roughing tool</option>
                 {Object.entries(groupedRoughingTools).map(([geometry, tools]) => (
@@ -698,7 +725,7 @@ const ToolChangeForm = () => {
                   </optgroup>
                 ))}
               </select>
-              {formData.new_first_rougher && (
+              {formData.first_rougher_action === 'Replace' && formData.new_first_rougher && (
                 <div className="mt-2 p-3 bg-green-50 border border-green-200 rounded text-sm">
                   {(() => {
                     const tool = getToolDetails(formData.new_first_rougher);
@@ -732,7 +759,7 @@ const ToolChangeForm = () => {
                 <option value="Flip">Flip Existing Insert</option>
               </select>
             </div>
-            {formData.old_first_rougher && formData.new_first_rougher && (
+            {formData.first_rougher_action === 'Replace' && formData.old_first_rougher && formData.new_first_rougher && (
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   Rougher Change Reason <span className="text-red-500">*</span>
@@ -784,8 +811,8 @@ const ToolChangeForm = () => {
                   </optgroup>
                 ))}
               </select>
-              {formData.old_finish_tool && (
-                <div className="mt-2 p-3 bg-red-50 border border-red-200 rounded text-sm">
+              {formData.finish_tool_action === 'Replace' && formData.old_finish_tool && formData.new_finish_tool && (
+                <div className="mt-2 p-3 bg-blue-50 border border-blue-200 rounded text-sm">
                   {(() => {
                     const tool = getToolDetails(formData.old_finish_tool);
                     return tool ? (
@@ -808,7 +835,8 @@ const ToolChangeForm = () => {
                 name="new_finish_tool"
                 value={formData.new_finish_tool}
                 onChange={handleInputChange}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500"
+                disabled={formData.finish_tool_action !== 'Replace'}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500 disabled:bg-gray-100"
               >
                 <option value="">Select replacement finishing tool</option>
                 {Object.entries(groupedFinishingTools).map(([geometry, tools]) => (
@@ -824,7 +852,7 @@ const ToolChangeForm = () => {
                   </optgroup>
                 ))}
               </select>
-              {formData.new_finish_tool && (
+              {formData.finish_tool_action === 'Replace' && formData.new_finish_tool && (
                 <div className="mt-2 p-3 bg-green-50 border border-green-200 rounded text-sm">
                   {(() => {
                     const tool = getToolDetails(formData.new_finish_tool);
@@ -858,7 +886,7 @@ const ToolChangeForm = () => {
                 <option value="Flip">Flip Existing Insert</option>
               </select>
             </div>
-            {formData.old_finish_tool && formData.new_finish_tool && (
+            {formData.finish_tool_action === 'Replace' && formData.old_finish_tool && formData.new_finish_tool && (
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   Finish Change Reason <span className="text-red-500">*</span>
