@@ -357,7 +357,11 @@ const ToolChangeForm = () => {
       }, 3000);
     } catch (error) {
       console.error('Error saving enhanced tool change:', error);
-      setSubmitStatus('error');
+      if (error?.status === 401 || error?.message?.toLowerCase().includes('401')) {
+        setSubmitStatus('unauthorized');
+      } else {
+        setSubmitStatus('error');
+      }
     } finally {
       setIsSubmitting(false);
     }
@@ -427,6 +431,18 @@ const ToolChangeForm = () => {
             <CheckCircle className="h-5 w-5 text-green-600 mr-2" />
             <span className="text-green-800 font-medium">
               Enhanced tool change data saved successfully! Cost: ${costSummary.totalCost.toFixed(2)}
+            </span>
+          </div>
+        </div>
+      )}
+
+      {/* Unauthorized Message */}
+      {submitStatus === 'unauthorized' && (
+        <div className="mb-6 bg-red-50 border border-red-200 rounded-lg p-4">
+          <div className="flex items-center">
+            <AlertTriangle className="h-5 w-5 text-red-600 mr-2" />
+            <span className="text-red-800 font-medium">
+              Authorization failed. Please verify your Supabase credentials.
             </span>
           </div>
         </div>
