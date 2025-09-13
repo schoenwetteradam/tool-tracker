@@ -51,7 +51,8 @@ const ToolChangeForm = () => {
     old_finish_tool: '',
     new_finish_tool: '',
     finish_tool_action: '',
-    change_reason: '',
+    first_rougher_change_reason: '',
+    finish_tool_change_reason: '',
     notes: ''
   });
 
@@ -185,8 +186,8 @@ const ToolChangeForm = () => {
 
     if (formData.heat_number?.startsWith('24')) riskScore += 2;
     if (formData.material_appearance && formData.material_appearance !== 'Normal') riskScore += 1;
-    if (formData.change_reason === 'Tool Breakage') riskScore += 2;
-    if (formData.change_reason === 'Chipped Edge') riskScore += 1;
+    if (formData.first_rougher_change_reason === 'Tool Breakage' || formData.finish_tool_change_reason === 'Tool Breakage') riskScore += 2;
+    if (formData.first_rougher_change_reason === 'Chipped Edge' || formData.finish_tool_change_reason === 'Chipped Edge') riskScore += 1;
 
     return Math.min(riskScore, 10);
   };
@@ -209,8 +210,8 @@ const ToolChangeForm = () => {
   // UPDATED VALIDATION LOGIC - MAKING TOOL FIELDS CONDITIONAL
   const validateForm = () => {
     const baseRequiredFields = [
-      'date', 'time', 'shift', 'operator', 'work_center', 'equipment_number',
-      'operation', 'part_number', 'change_reason', 'heat_number'
+      'heat_number', 'date', 'time', 'shift', 'operator', 'work_center', 'equipment_number',
+      'operation', 'part_number'
     ];
 
     let missingFields = baseRequiredFields.filter(field => !formData[field]);
@@ -229,6 +230,9 @@ const ToolChangeForm = () => {
       if (!formData.old_first_rougher) validationErrors.push('Current First Rougher is required when making rougher changes');
       if (!formData.new_first_rougher) validationErrors.push('New First Rougher is required when making rougher changes');
       if (!formData.first_rougher_action) validationErrors.push('Rougher Action is required when making rougher changes');
+      if (formData.old_first_rougher && formData.new_first_rougher && !formData.first_rougher_change_reason) {
+        validationErrors.push('Rougher Change Reason is required when replacing rougher');
+      }
     }
 
     // Validate finisher fields if any finisher field is filled
@@ -236,6 +240,9 @@ const ToolChangeForm = () => {
       if (!formData.old_finish_tool) validationErrors.push('Current Finish Tool is required when making finisher changes');
       if (!formData.new_finish_tool) validationErrors.push('New Finish Tool is required when making finisher changes');
       if (!formData.finish_tool_action) validationErrors.push('Finish Action is required when making finisher changes');
+      if (formData.old_finish_tool && formData.new_finish_tool && !formData.finish_tool_change_reason) {
+        validationErrors.push('Finish Change Reason is required when replacing finisher');
+      }
     }
 
     return {
@@ -286,7 +293,9 @@ const ToolChangeForm = () => {
         casting_date: estimateCastingDate(formData.heat_number),
         material_appearance: formData.material_appearance || 'Normal',
         material_risk_score: calculateMaterialRiskScore(),
-        change_reason: formData.change_reason || null,
+        first_rougher_change_reason: formData.first_rougher_change_reason || null,
+        finish_tool_change_reason: formData.finish_tool_change_reason || null,
+        change_reason: [formData.first_rougher_change_reason, formData.finish_tool_change_reason].filter(Boolean).join(', ') || null,
         notes: formData.notes || null,
         created_at: new Date().toISOString(),
         // Enhanced tool data
@@ -339,7 +348,8 @@ const ToolChangeForm = () => {
           old_finish_tool: '',
           new_finish_tool: '',
           finish_tool_action: '',
-          change_reason: '',
+          first_rougher_change_reason: '',
+          finish_tool_change_reason: '',
           notes: ''
         });
         setSubmitStatus(null);
@@ -440,7 +450,21 @@ const ToolChangeForm = () => {
           <Clock className="mr-2" size={20} />
           Basic Information
         </h2>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Heat Number <span className="text-red-500">*</span>
+            </label>
+            <input
+              type="text"
+              name="heat_number"
+              value={formData.heat_number}
+              onChange={handleInputChange}
+              required
+              placeholder="Enter heat number"
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+          </div>
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
               Date <span className="text-red-500">*</span>
@@ -692,6 +716,28 @@ const ToolChangeForm = () => {
                 <option value="Flip">Flip Existing Insert</option>
               </select>
             </div>
+            {formData.old_first_rougher && formData.new_first_rougher && (
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Rougher Change Reason <span className="text-red-500">*</span>
+                </label>
+                <select
+                  name="first_rougher_change_reason"
+                  value={formData.first_rougher_change_reason}
+                  onChange={handleInputChange}
+                  required
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500"
+                >
+                  <option value="">Select reason</option>
+                  <option value="Normal wear">Normal wear</option>
+                  <option value="Tool Breakage">Tool Breakage</option>
+                  <option value="Chipped Edge">Chipped Edge</option>
+                  <option value="Poor finish">Poor finish</option>
+                  <option value="Size problems">Size problems</option>
+                  <option value="Scheduled maintenance">Scheduled maintenance</option>
+                </select>
+              </div>
+            )}
           </div>
 
           {/* Finish Tool Section */}
@@ -796,6 +842,28 @@ const ToolChangeForm = () => {
                 <option value="Flip">Flip Existing Insert</option>
               </select>
             </div>
+            {formData.old_finish_tool && formData.new_finish_tool && (
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Finish Change Reason <span className="text-red-500">*</span>
+                </label>
+                <select
+                  name="finish_tool_change_reason"
+                  value={formData.finish_tool_change_reason}
+                  onChange={handleInputChange}
+                  required
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500"
+                >
+                  <option value="">Select reason</option>
+                  <option value="Normal wear">Normal wear</option>
+                  <option value="Tool Breakage">Tool Breakage</option>
+                  <option value="Chipped Edge">Chipped Edge</option>
+                  <option value="Poor finish">Poor finish</option>
+                  <option value="Size problems">Size problems</option>
+                  <option value="Scheduled maintenance">Scheduled maintenance</option>
+                </select>
+              </div>
+            )}
           </div>
         </div>
       </div>
@@ -806,21 +874,7 @@ const ToolChangeForm = () => {
           <TrendingUp className="mr-2" size={20} />
           Material & Process Information
         </h2>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Heat Number <span className="text-red-500">*</span>
-            </label>
-            <input
-              type="text"
-              name="heat_number"
-              value={formData.heat_number}
-              onChange={handleInputChange}
-              required
-              placeholder="Enter heat number"
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-yellow-500"
-            />
-          </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
               Material Appearance
@@ -836,26 +890,6 @@ const ToolChangeForm = () => {
               <option value="Inclusions">Inclusions</option>
               <option value="Surface defects">Surface defects</option>
               <option value="Poor machinability">Poor machinability</option>
-            </select>
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Change Reason <span className="text-red-500">*</span>
-            </label>
-            <select
-              name="change_reason"
-              value={formData.change_reason}
-              onChange={handleInputChange}
-              required
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-yellow-500"
-            >
-              <option value="">Select reason</option>
-              <option value="Normal wear">Normal wear</option>
-              <option value="Tool Breakage">Tool Breakage</option>
-              <option value="Chipped Edge">Chipped Edge</option>
-              <option value="Poor finish">Poor finish</option>
-              <option value="Size problems">Size problems</option>
-              <option value="Scheduled maintenance">Scheduled maintenance</option>
             </select>
           </div>
         </div>

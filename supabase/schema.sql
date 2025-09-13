@@ -18,6 +18,8 @@ CREATE TABLE tool_changes (
   tool_position VARCHAR(50),
   insert_type VARCHAR(50),
   insert_grade VARCHAR(50),
+  first_rougher_change_reason VARCHAR(100),
+  finish_tool_change_reason VARCHAR(100),
   change_reason VARCHAR(100),
   old_tool_condition VARCHAR(50),
   pieces_produced INTEGER,
