@@ -32,7 +32,8 @@ import {
   ArrowLeft,
   RefreshCw,
   Database,
-  BarChart3
+  BarChart3,
+  Package
 } from 'lucide-react'
 
 export default function Dashboard() {
