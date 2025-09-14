@@ -41,6 +41,12 @@ export default function Dashboard() {
   const [costAnalysis, setCostAnalysis] = useState(null)
   const [isLoading, setIsLoading] = useState(true)
   const [selectedDateRange, setSelectedDateRange] = useState(30)
+  const [stats, setStats] = useState({
+    todayChanges: 0,
+    activeMachines: 0,
+    costSavings: 0,
+    efficiency: 0
+  })
 
   // Chart colors
   const colors = ['#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6', '#06B6D4']
@@ -61,6 +67,18 @@ export default function Dashboard() {
       setToolChanges(changes || [])
       setAnalytics(analyticsData)
       setCostAnalysis(costData)
+
+      // Calculate quick stats
+      const todayStr = new Date().toISOString().split('T')[0]
+      const todayChanges = (changes || []).filter(c => c.date === todayStr).length
+      const activeMachines = new Set((changes || []).map(c => c.equipment_number)).size
+      const reactiveChanges = (changes || []).filter(c =>
+        c.change_reason === 'Tool Breakage' || c.change_reason === 'Chipped Edge'
+      ).length
+      const avgChangesPerDay = (changes || []).length / selectedDateRange
+      const efficiency = Math.min(Math.round(avgChangesPerDay * 20), 100)
+      const costSavings = reactiveChanges * 25
+      setStats({ todayChanges, activeMachines, costSavings, efficiency })
     } catch (error) {
       console.error('Error loading dashboard data:', error)
     } finally {
@@ -198,7 +216,7 @@ export default function Dashboard() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-gray-600">Tool Changes Today</p>
-                <p className="text-2xl font-bold text-gray-900">--</p>
+                <p className="text-2xl font-bold text-gray-900">{stats.todayChanges}</p>
               </div>
               <TrendingUp className="h-8 w-8 text-blue-600" />
             </div>
@@ -208,7 +226,7 @@ export default function Dashboard() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-gray-600">Active Machines</p>
-                <p className="text-2xl font-bold text-gray-900">--</p>
+                <p className="text-2xl font-bold text-gray-900">{stats.activeMachines}</p>
               </div>
               <Settings className="h-8 w-8 text-green-600" />
             </div>
@@ -218,7 +236,7 @@ export default function Dashboard() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-gray-600">Cost Savings</p>
-                <p className="text-2xl font-bold text-gray-900">$--</p>
+                <p className="text-2xl font-bold text-gray-900">${stats.costSavings}</p>
               </div>
               <Database className="h-8 w-8 text-purple-600" />
             </div>
@@ -228,7 +246,7 @@ export default function Dashboard() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-gray-600">Efficiency</p>
-                <p className="text-2xl font-bold text-gray-900">--%</p>
+                <p className="text-2xl font-bold text-gray-900">{stats.efficiency}%</p>
               </div>
               <BarChart3 className="h-8 w-8 text-orange-600" />
             </div>
