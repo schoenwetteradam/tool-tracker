@@ -14,7 +14,70 @@ import {
   Package2,
   Truck
 } from 'lucide-react';
-import { addToolChange } from '../lib/supabase';
+import { addToolChange, getOperators } from '../lib/supabase';
+
+const normalizeOperatorOption = (operator) => {
+  if (!operator) return null;
+
+  const employeeId = operator.employee_id !== undefined && operator.employee_id !== null
+    ? String(operator.employee_id).trim()
+    : '';
+  const clockNumber = operator.clock_number !== undefined && operator.clock_number !== null
+    ? String(operator.clock_number).trim()
+    : '';
+  const firstName = operator.first_name?.trim() || '';
+  const lastName = operator.last_name?.trim() || '';
+  const fullName = operator.full_name?.trim() || '';
+
+  let displayName = '';
+  if (lastName && firstName) {
+    displayName = `${lastName}, ${firstName}`;
+  } else if (fullName) {
+    displayName = fullName;
+  } else {
+    displayName = [firstName, lastName].filter(Boolean).join(' ').trim();
+  }
+
+  if (!displayName) {
+    displayName = 'Unknown Operator';
+  }
+
+  const identifier = employeeId || clockNumber || (operator.id !== undefined && operator.id !== null
+    ? String(operator.id).trim()
+    : '');
+
+  if (!identifier) {
+    return null;
+  }
+
+  return {
+    value: identifier,
+    label: `${identifier} ${displayName}`.trim(),
+    displayName,
+    employeeId,
+    clockNumber,
+    databaseId: operator.id ?? null,
+  };
+};
+
+const FALLBACK_OPERATORS = [
+  normalizeOperatorOption({
+    id: '1422',
+    employee_id: '1422',
+    clock_number: '1422',
+    first_name: 'Logan',
+    last_name: 'Maas',
+    full_name: 'Maas, Logan',
+  }),
+  normalizeOperatorOption({
+    id: '1395',
+    employee_id: '1395',
+    clock_number: '1395',
+    first_name: 'Trevor C',
+    last_name: 'Swalheim',
+    full_name: 'Swalheim, Trevor C',
+  }),
+].filter(Boolean);
 
 const ToolChangeForm = () => {
   const getCurrentDateTime = () => {
@@ -70,9 +133,63 @@ const ToolChangeForm = () => {
     newToolCost: 0,
     totalCost: 0
   });
+  const [operators, setOperators] = useState(() => [...FALLBACK_OPERATORS]);
+  const [selectedOperatorValue, setSelectedOperatorValue] = useState('');
 
   useEffect(() => {
     fetchToolInventory();
+  }, []);
+
+  useEffect(() => {
+    const loadOperators = async () => {
+      try {
+        const data = await getOperators();
+
+        if (!data?.length) {
+          return;
+        }
+
+        const enrichedOptions = FALLBACK_OPERATORS.map((fallbackOption) => {
+          const matchingOperator = data.find((operator) => {
+            const potentialMatches = [
+              operator.employee_id,
+              operator.clock_number,
+              operator.id,
+            ]
+              .filter((value) => value !== undefined && value !== null)
+              .map((value) => String(value));
+
+            return potentialMatches.includes(fallbackOption.value);
+          });
+
+          if (!matchingOperator) {
+            return fallbackOption;
+          }
+
+          const normalized = normalizeOperatorOption(matchingOperator);
+
+          if (!normalized) {
+            return fallbackOption;
+          }
+
+          return {
+            ...normalized,
+            value: fallbackOption.value,
+            label: fallbackOption.label,
+            displayName: fallbackOption.displayName,
+            employeeId: normalized.employeeId || fallbackOption.employeeId,
+            clockNumber: normalized.clockNumber || fallbackOption.clockNumber,
+            databaseId: normalized.databaseId,
+          };
+        });
+
+        setOperators(enrichedOptions);
+      } catch (error) {
+        console.error('❌ Error loading operators for dropdown:', error);
+      }
+    };
+
+    loadOperators();
   }, []);
 
   useEffect(() => {
@@ -162,6 +279,42 @@ const ToolChangeForm = () => {
 
       return updated;
     });
+  };
+
+  const handleOperatorSelect = (event) => {
+    const { value } = event.target;
+    setSelectedOperatorValue(value);
+
+    if (!value) {
+      setFormData(prev => ({
+        ...prev,
+        operator: '',
+        operator_employee_id: '',
+        operator_clock_number: '',
+        operator_id: null,
+      }));
+      return;
+    }
+
+    const selectedOption = operators.find(option => option.value === value);
+
+    if (selectedOption) {
+      setFormData(prev => ({
+        ...prev,
+        operator: selectedOption.displayName,
+        operator_employee_id: selectedOption.employeeId || '',
+        operator_clock_number: selectedOption.clockNumber || '',
+        operator_id: selectedOption.databaseId ?? null,
+      }));
+    } else {
+      setFormData(prev => ({
+        ...prev,
+        operator: '',
+        operator_employee_id: '',
+        operator_clock_number: '',
+        operator_id: null,
+      }));
+    }
   };
 
   const getStockStatus = (tool) => {
@@ -378,6 +531,7 @@ const ToolChangeForm = () => {
           finish_tool_change_reason: '',
           notes: ''
         });
+        setSelectedOperatorValue('');
         setSubmitStatus(null);
         setCostSummary({ oldToolCost: 0, newToolCost: 0, totalCost: 0 });
       }, 3000);
@@ -564,15 +718,21 @@ const ToolChangeForm = () => {
             <label className="block text-sm font-medium text-gray-700 mb-1">
               Operator <span className="text-red-500">*</span>
             </label>
-            <input
-              type="text"
+            <select
               name="operator"
-              value={formData.operator}
-              onChange={handleInputChange}
+              value={selectedOperatorValue}
+              onChange={handleOperatorSelect}
               required
-              placeholder="Enter operator name"
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500"
-            />
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500 disabled:bg-gray-100 disabled:text-gray-500"
+              disabled={!operators.length}
+            >
+              <option value="">Select operator</option>
+              {operators.map(option => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
           </div>
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
