@@ -449,6 +449,21 @@ const ToolChangeForm = () => {
       const oldFinishTool = getToolDetails(formData.old_finish_tool);
       const newFinishTool = getToolDetails(formData.new_finish_tool);
 
+      const replacementCosts = [];
+
+      if (newRougherTool && formData.first_rougher_action === 'Replace') {
+        replacementCosts.push(newRougherTool.unit_cost || 0);
+      }
+
+      if (newFinishTool && formData.finish_tool_action === 'Replace') {
+        replacementCosts.push(newFinishTool.unit_cost || 0);
+      }
+
+      const calculatedCostPerTool =
+        replacementCosts.length > 0
+          ? replacementCosts.reduce((sum, cost) => sum + (Number.isFinite(cost) ? cost : 0), 0)
+          : null;
+
       const cleanedData = {
         date: formData.date,
         time: formData.time,
@@ -482,13 +497,20 @@ const ToolChangeForm = () => {
         new_rougher_material_id: newRougherTool?.material_id || null,
         old_finish_material_id: oldFinishTool?.material_id || null,
         new_finish_material_id: newFinishTool?.material_id || null,
-        rougher_cost: newRougherTool?.unit_cost || 0,
-        finish_cost: newFinishTool?.unit_cost || 0,
-        total_tool_cost: costSummary.totalCost,
+        rougher_cost:
+          formData.first_rougher_action === 'Replace' && newRougherTool
+            ? newRougherTool.unit_cost || 0
+            : null,
+        finish_cost:
+          formData.finish_tool_action === 'Replace' && newFinishTool
+            ? newFinishTool.unit_cost || 0
+            : null,
+        total_tool_cost: costSummary.totalCost > 0 ? costSummary.totalCost : null,
         old_rougher_supplier: oldRougherTool?.supplier_name || null,
         new_rougher_supplier: newRougherTool?.supplier_name || null,
         old_finish_supplier: oldFinishTool?.supplier_name || null,
-        new_finish_supplier: newFinishTool?.supplier_name || null
+        new_finish_supplier: newFinishTool?.supplier_name || null,
+        cost_per_tool: calculatedCostPerTool
       };
 
       const result = await addToolChange(cleanedData);
