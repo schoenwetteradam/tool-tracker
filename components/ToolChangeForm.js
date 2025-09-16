@@ -369,17 +369,29 @@ const ToolChangeForm = () => {
 
   const estimateCastingDate = (heatNumber) => {
     if (!heatNumber) return null;
-    
-    if (heatNumber.startsWith('24')) {
-      const sequence = heatNumber.substring(2);
-      const monthEstimate = Math.ceil(parseInt(sequence.substring(0, 1)) * 1.2);
-      return `2024-${monthEstimate.toString().padStart(2, '0')}-01`;
-    } else if (heatNumber.startsWith('25')) {
-      const sequence = heatNumber.substring(2);
-      const monthEstimate = Math.ceil(parseInt(sequence.substring(0, 1)) * 1.2);
-      return `2025-${monthEstimate.toString().padStart(2, '0')}-01`;
-    }
-    return null;
+
+    const yearLookup = {
+      '24': 2024,
+      '25': 2025,
+    };
+
+    const prefix = heatNumber.substring(0, 2);
+    const year = yearLookup[prefix];
+
+    if (!year) return null;
+
+    const numericSequence = heatNumber.substring(2).replace(/\D/g, '');
+
+    if (!numericSequence) return null;
+
+    const firstDigit = parseInt(numericSequence[0], 10);
+
+    if (!Number.isFinite(firstDigit)) return null;
+
+    const monthEstimate = Math.ceil(firstDigit * 1.2);
+    const normalizedMonth = Math.min(12, Math.max(1, monthEstimate || firstDigit || 1));
+
+    return `${year}-${normalizedMonth.toString().padStart(2, '0')}-01`;
   };
 
   // UPDATED VALIDATION LOGIC - MAKING TOOL FIELDS CONDITIONAL
