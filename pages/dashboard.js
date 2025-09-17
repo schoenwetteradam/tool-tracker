@@ -36,6 +36,193 @@ import {
   Package
 } from 'lucide-react'
 
+const mapToolChangeForDisplay = (toolChange) => {
+  const operatorDisplay =
+    toolChange.operator ||
+    toolChange.operator_details?.full_name ||
+    (toolChange.operator_employee_id ? `Employee ${toolChange.operator_employee_id}` : null) ||
+    'N/A'
+
+  const equipmentDisplay =
+    toolChange.machine_number || toolChange.equipment_number || toolChange.work_center || 'N/A'
+
+  const firstRougherDisplay = toolChange.first_rougher || toolChange.new_tool_id || 'N/A'
+  const finishToolDisplay = toolChange.finish_tool || toolChange.new_tool_id || 'N/A'
+
+  const changeReasonDisplay =
+    toolChange.change_reason ||
+    toolChange.first_rougher_change_reason ||
+    toolChange.finish_tool_change_reason ||
+    'N/A'
+
+  const downtimeValue =
+    toolChange.downtime_minutes ?? toolChange.tool_change_duration_minutes ?? 'N/A'
+
+  const totalCostValue = Number(toolChange.total_tool_cost ?? 0)
+
+  return {
+    id: toolChange.id,
+    date: toolChange.date || 'N/A',
+    time: toolChange.time || 'N/A',
+    operator: operatorDisplay,
+    equipment: equipmentDisplay,
+    firstRougher: firstRougherDisplay,
+    finishTool: finishToolDisplay,
+    changeReason: changeReasonDisplay,
+    downtime: downtimeValue,
+    partNumber: toolChange.part_number || 'N/A',
+    jobNumber: toolChange.job_number || 'N/A',
+    heatNumber: toolChange.heat_number || 'N/A',
+    piecesProduced: toolChange.pieces_produced ?? 'N/A',
+    totalCost: Number.isFinite(totalCostValue) ? totalCostValue : 0,
+    notes: toolChange.notes || '',
+    rawData: toolChange
+  }
+}
+
+const ToolChangesTable = ({ toolChanges = [] }) => {
+  const mappedData = toolChanges.map(mapToolChangeForDisplay)
+
+  return (
+    <div className="bg-white rounded-lg shadow-sm border overflow-hidden">
+      <div className="px-6 py-4 border-b border-gray-200 flex justify-between items-center">
+        <h3 className="text-lg font-semibold text-gray-900">Recent Tool Changes</h3>
+        <span className="text-sm text-gray-500">{toolChanges.length} records</span>
+      </div>
+
+      <div className="overflow-x-auto">
+        <table className="min-w-full divide-y divide-gray-200">
+          <thead className="bg-gray-50">
+            <tr>
+              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                Date/Time
+              </th>
+              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                Operator
+              </th>
+              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                Equipment
+              </th>
+              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                1st Rougher
+              </th>
+              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                Finish Tool
+              </th>
+              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                Reason
+              </th>
+              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                Downtime
+              </th>
+              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                Cost
+              </th>
+            </tr>
+          </thead>
+          <tbody className="bg-white divide-y divide-gray-200">
+            {mappedData.map((change, index) => (
+              <tr key={change.id || index} className="hover:bg-gray-50">
+                <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">
+                  <div>
+                    <div className="font-medium">{change.date}</div>
+                    <div className="text-gray-500">{change.time}</div>
+                  </div>
+                </td>
+                <td className="px-4 py-3 whitespace-nowrap text-sm">
+                  <div className={`font-medium ${change.operator !== 'N/A' ? 'text-gray-900' : 'text-gray-400'}`}>
+                    {change.operator}
+                  </div>
+                </td>
+                <td className="px-4 py-3 whitespace-nowrap text-sm">
+                  <div className={`font-medium ${change.equipment !== 'N/A' ? 'text-gray-900' : 'text-gray-400'}`}>
+                    {change.equipment}
+                  </div>
+                </td>
+                <td className="px-4 py-3 whitespace-nowrap text-sm">
+                  <span
+                    className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
+                      change.firstRougher !== 'N/A'
+                        ? 'bg-blue-100 text-blue-800'
+                        : 'bg-gray-100 text-gray-500'
+                    }`}
+                  >
+                    {change.firstRougher}
+                  </span>
+                </td>
+                <td className="px-4 py-3 whitespace-nowrap text-sm">
+                  <span
+                    className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
+                      change.finishTool !== 'N/A'
+                        ? 'bg-green-100 text-green-800'
+                        : 'bg-gray-100 text-gray-500'
+                    }`}
+                  >
+                    {change.finishTool}
+                  </span>
+                </td>
+                <td className="px-4 py-3 text-sm text-gray-900 max-w-xs truncate">
+                  {change.changeReason}
+                </td>
+                <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">
+                  {change.downtime !== 'N/A' ? `${change.downtime} min` : 'N/A'}
+                </td>
+                <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">
+                  {change.totalCost > 0 ? `$${change.totalCost.toFixed(2)}` : 'N/A'}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+
+      {toolChanges.length === 0 && (
+        <div className="text-center py-12 text-gray-500">
+          <div className="text-lg mb-2">No tool changes recorded yet</div>
+          <Link href="/tool-change-form" className="text-blue-600 hover:text-blue-500">
+            Add your first tool change →
+          </Link>
+        </div>
+      )}
+    </div>
+  )
+}
+
+const debugToolChangeData = async () => {
+  try {
+    const changes = await getToolChanges()
+    console.log('=== TOOL CHANGES DEBUG INFO ===')
+    console.log('Total records:', changes?.length || 0)
+
+    if (changes && changes.length > 0) {
+      const latest = changes[0]
+      console.log('Latest record structure:', latest)
+      console.log('Available fields:', Object.keys(latest))
+
+      // Test the mapping function
+      const mapped = mapToolChangeForDisplay(latest)
+      console.log('Mapped display data:', mapped)
+
+      // Check specific fields that were showing N/A
+      console.log('Field check:', {
+        original_operator: latest.operator,
+        original_machine: latest.machine_number,
+        original_equipment: latest.equipment_number,
+        original_first_rougher: latest.first_rougher,
+        original_finish_tool: latest.finish_tool,
+        original_change_reason: latest.change_reason,
+        mapped_operator: mapped.operator,
+        mapped_equipment: mapped.equipment,
+        mapped_firstRougher: mapped.firstRougher,
+        mapped_finishTool: mapped.finishTool,
+        mapped_changeReason: mapped.changeReason
+      })
+    }
+  } catch (error) {
+    console.error('Debug error:', error)
+  }
+}
+
 export default function Dashboard() {
   const [toolChanges, setToolChanges] = useState([])
   const [analytics, setAnalytics] = useState(null)
@@ -53,6 +240,7 @@ export default function Dashboard() {
   const colors = ['#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6', '#06B6D4']
 
   useEffect(() => {
+    debugToolChangeData()
     loadDashboardData()
   }, [selectedDateRange])
 
@@ -418,52 +606,10 @@ export default function Dashboard() {
         )}
 
         {/* Recent Tool Changes Table */}
-        <div className="bg-white p-6 rounded-lg shadow-sm border">
-          <h2 className="text-xl font-semibold text-gray-900 mb-4">Recent Tool Changes</h2>
-          <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50">
-                <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date/Time</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Operator</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Equipment</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">1st Rougher</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Finish Tool</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Reason</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Downtime</th>
-                </tr>
-              </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
-                {toolChanges.slice(0, 10).map((change, index) => (
-                  <tr key={index} className="hover:bg-gray-50">
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      {change.date} {change.time}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      {change.operator || 'N/A'}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      {change.equipment_number || 'N/A'}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      {change.first_rougher || 'N/A'}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      {change.finish_tool || 'N/A'}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      {change.change_reason || 'N/A'}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      {change.downtime_minutes ? `${change.downtime_minutes} min` : 'N/A'}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
+        <ToolChangesTable toolChanges={toolChanges} />
       </div>
     </div>
   )
 }
+
+export { ToolChangesTable, debugToolChangeData, mapToolChangeForDisplay }
