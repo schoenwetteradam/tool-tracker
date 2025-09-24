@@ -1,6 +1,6 @@
 import ToolChangeForm from '../components/ToolChangeForm'
 import Link from 'next/link'
-import { Plus, QrCode } from 'lucide-react'
+import { Plus, QrCode, Ruler } from 'lucide-react'
 
 export default function Home() {
   return (
@@ -10,7 +10,14 @@ export default function Home() {
         <div className="max-w-7xl mx-auto px-4 py-4">
           <div className="flex justify-between items-center">
             <h1 className="text-3xl font-bold text-gray-900">🔧 Tool Change Tracker</h1>
-            <nav className="flex space-x-4">
+            <nav className="flex flex-wrap gap-3">
+              <Link
+                href="/blast-exit"
+                className="flex items-center space-x-2 bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700 transition-colors"
+              >
+                <Ruler size={20} />
+                <span>Blast Exit Measurements</span>
+              </Link>
               <Link
                 href="/qr-generator"
                 className="flex items-center space-x-2 bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors"
@@ -24,7 +31,7 @@ export default function Home() {
       </header>
       <div className="max-w-7xl mx-auto px-4 py-8">
         {/* Action Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 mb-8">
           <div className="bg-gradient-to-r from-green-500 to-green-600 p-6 rounded-lg text-white">
             <div className="flex items-center space-x-3">
               <Plus size={32} />
@@ -34,6 +41,18 @@ export default function Home() {
               </div>
             </div>
           </div>
+
+          <Link href="/blast-exit" className="group">
+            <div className="bg-gradient-to-r from-indigo-500 to-indigo-600 p-6 rounded-lg text-white hover:from-indigo-600 hover:to-indigo-700 transition-all transform group-hover:scale-105">
+              <div className="flex items-center space-x-3">
+                <Ruler size={32} />
+                <div>
+                  <h3 className="text-xl font-semibold">Blast Exit Measurements</h3>
+                  <p className="text-indigo-100">Capture casting inspection data</p>
+                </div>
+              </div>
+            </div>
+          </Link>
 
           <Link href="/qr-generator" className="group">
             <div className="bg-gradient-to-r from-purple-500 to-purple-600 p-6 rounded-lg text-white hover:from-purple-600 hover:to-purple-700 transition-all transform group-hover:scale-105">
