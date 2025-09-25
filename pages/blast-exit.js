@@ -31,7 +31,7 @@ const statusStyles = {
 
 const cylinderFields = ['barrelDiameter', 'flangeDiameter', 'overallLength', 'lengthToFlange']
 
-const initialFormData = {
+const createInitialFormData = () => ({
   productNumber: '',
   heatNumber: '',
   trackingNumber: '',
@@ -41,18 +41,15 @@ const initialFormData = {
   flangeDiameter: '',
   overallLength: '',
   lengthToFlange: '',
-  od1: '',
-  od2: '',
-  od3: '',
-  id1: '',
-  id2: '',
-  length1: '',
   materialAppearance: '',
   dimensionalStatus: 'PASS',
   heatTreatApproved: 'true',
   surfaceCondition: '',
-  notes: ''
-}
+  notes: '',
+  odMeasurements: [],
+  idMeasurements: [],
+  lengthMeasurements: []
+})
 
 const initialToleranceStatuses = cylinderFields.reduce((accumulator, key) => {
   return { ...accumulator, [key]: 'NONE' }
@@ -85,8 +82,23 @@ function getTolerance(value, fallback) {
   return Number.isFinite(numericValue) ? numericValue : fallback
 }
 
+function normalizeNumber(value) {
+  const numericValue = parseFloat(value)
+  return Number.isFinite(numericValue) ? numericValue : null
+}
+
+function sanitizeCount(value) {
+  const numericValue = Number.parseInt(value, 10)
+
+  if (!Number.isFinite(numericValue)) {
+    return 0
+  }
+
+  return Math.max(0, numericValue)
+}
+
 export default function BlastExitMeasurement() {
-  const [formData, setFormData] = useState(() => ({ ...initialFormData }))
+  const [formData, setFormData] = useState(() => createInitialFormData())
   const [toleranceStatuses, setToleranceStatuses] = useState(() => ({ ...initialToleranceStatuses }))
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [successMessage, setSuccessMessage] = useState('')
@@ -140,6 +152,19 @@ export default function BlastExitMeasurement() {
 
   const selectedSpec = formData.productNumber ? templatesByNumber[formData.productNumber] : null
 
+  const showBarrelDiameter = Boolean(
+    selectedSpec?.requires_barrel_diameter || normalizeNumber(selectedSpec?.barrel_diameter_target) !== null
+  )
+  const showFlangeDiameter = Boolean(
+    selectedSpec?.requires_flange_diameter || normalizeNumber(selectedSpec?.flange_diameter_target) !== null
+  )
+  const showOverallLength = Boolean(
+    selectedSpec?.requires_overall_length || normalizeNumber(selectedSpec?.overall_length_target) !== null
+  )
+  const showLengthToFlange = Boolean(
+    selectedSpec?.requires_length_to_flange || normalizeNumber(selectedSpec?.length_to_flange_target) !== null
+  )
+
   const isCylinder = useMemo(() => {
     if (!selectedSpec) {
       return false
@@ -149,59 +174,71 @@ export default function BlastExitMeasurement() {
       return true
     }
 
-    if (selectedSpec.requires_barrel_diameter && selectedSpec.requires_flange_diameter) {
-      return true
-    }
+    return showBarrelDiameter || showFlangeDiameter || showLengthToFlange
+  }, [selectedSpec, showBarrelDiameter, showFlangeDiameter, showLengthToFlange])
 
-    return Boolean(selectedSpec.barrel_diameter_target && selectedSpec.flange_diameter_target)
-  }, [selectedSpec])
-
-  const showLengthToFlange = Boolean(
-    selectedSpec?.length_to_flange_target && (selectedSpec?.requires_length_to_flange ?? true)
-  )
+  const odCount = formData.odMeasurements.length
+  const idCount = formData.idMeasurements.length
+  const lengthCount = formData.lengthMeasurements.length
+  const scrapThreshold = normalizeNumber(selectedSpec?.scrap_threshold_percentage)
+  const reworkThreshold = normalizeNumber(selectedSpec?.rework_threshold_percentage)
 
   const toleranceMap = useMemo(() => {
     if (!isCylinder || !selectedSpec) {
       return {}
     }
 
-    const barrelTolerance = getTolerance(selectedSpec.barrel_diameter_tolerance, 0.02)
-    const flangeTolerance = getTolerance(selectedSpec.flange_diameter_tolerance, 0.02)
-    const overallTolerance = getTolerance(selectedSpec.overall_length_tolerance, 0.03)
-    const flangeLengthTolerance = getTolerance(selectedSpec.length_to_flange_tolerance, 0.02)
-
     const map = {}
 
-    if (selectedSpec.barrel_diameter_target) {
-      map.barrelDiameter = {
-        target: selectedSpec.barrel_diameter_target,
-        tolerance: barrelTolerance
+    if (showBarrelDiameter) {
+      const target = normalizeNumber(selectedSpec.barrel_diameter_target)
+      if (target !== null) {
+        map.barrelDiameter = {
+          target,
+          tolerance: getTolerance(selectedSpec.barrel_diameter_tolerance, 0.02)
+        }
       }
     }
 
-    if (selectedSpec.flange_diameter_target) {
-      map.flangeDiameter = {
-        target: selectedSpec.flange_diameter_target,
-        tolerance: flangeTolerance
+    if (showFlangeDiameter) {
+      const target = normalizeNumber(selectedSpec.flange_diameter_target)
+      if (target !== null) {
+        map.flangeDiameter = {
+          target,
+          tolerance: getTolerance(selectedSpec.flange_diameter_tolerance, 0.02)
+        }
       }
     }
 
-    if (selectedSpec.overall_length_target) {
-      map.overallLength = {
-        target: selectedSpec.overall_length_target,
-        tolerance: overallTolerance
+    if (showOverallLength) {
+      const target = normalizeNumber(selectedSpec.overall_length_target)
+      if (target !== null) {
+        map.overallLength = {
+          target,
+          tolerance: getTolerance(selectedSpec.overall_length_tolerance, 0.03)
+        }
       }
     }
 
-    if (showLengthToFlange && selectedSpec.length_to_flange_target) {
-      map.lengthToFlange = {
-        target: selectedSpec.length_to_flange_target,
-        tolerance: flangeLengthTolerance
+    if (showLengthToFlange) {
+      const target = normalizeNumber(selectedSpec.length_to_flange_target)
+      if (target !== null) {
+        map.lengthToFlange = {
+          target,
+          tolerance: getTolerance(selectedSpec.length_to_flange_tolerance, 0.02)
+        }
       }
     }
 
     return map
-  }, [isCylinder, selectedSpec, showLengthToFlange])
+  }, [
+    isCylinder,
+    selectedSpec,
+    showBarrelDiameter,
+    showFlangeDiameter,
+    showLengthToFlange,
+    showOverallLength
+  ])
 
   useEffect(() => {
     setToleranceStatuses((previous) => {
@@ -221,6 +258,26 @@ export default function BlastExitMeasurement() {
     const { name, value } = event.target
 
     if (name === 'productNumber') {
+      const template = value && value !== 'OTHER' ? templatesByNumber[value] : null
+
+      const resolvedOdCount = template
+        ? sanitizeCount(template.od_measurement_count)
+        : value === 'OTHER'
+          ? 3
+          : 0
+
+      const resolvedIdCount = template
+        ? sanitizeCount(template.id_measurement_count)
+        : value === 'OTHER'
+          ? 2
+          : 0
+
+      const resolvedLengthCount = template
+        ? sanitizeCount(template.length_measurement_count)
+        : value === 'OTHER'
+          ? 1
+          : 0
+
       setFormData((previous) => ({
         ...previous,
         productNumber: value,
@@ -228,13 +285,11 @@ export default function BlastExitMeasurement() {
         flangeDiameter: '',
         overallLength: '',
         lengthToFlange: '',
-        od1: '',
-        od2: '',
-        od3: '',
-        id1: '',
-        id2: '',
-        length1: ''
+        odMeasurements: Array.from({ length: resolvedOdCount }, () => ''),
+        idMeasurements: Array.from({ length: resolvedIdCount }, () => ''),
+        lengthMeasurements: Array.from({ length: resolvedLengthCount }, () => '')
       }))
+      setToleranceStatuses({ ...initialToleranceStatuses })
       return
     }
 
@@ -244,8 +299,20 @@ export default function BlastExitMeasurement() {
     }))
   }
 
+  const handleMeasurementChange = (field, index, value) => {
+    setFormData((previous) => {
+      const existingMeasurements = previous[field] || []
+      const updatedMeasurements = [...existingMeasurements]
+      updatedMeasurements[index] = value
+      return {
+        ...previous,
+        [field]: updatedMeasurements
+      }
+    })
+  }
+
   const resetFormFields = () => {
-    setFormData({ ...initialFormData })
+    setFormData(createInitialFormData())
     setToleranceStatuses({ ...initialToleranceStatuses })
   }
 
@@ -307,12 +374,6 @@ export default function BlastExitMeasurement() {
       length_to_flange_actual: formData.lengthToFlange ? parseFloat(formData.lengthToFlange) : null,
       length_to_flange_target: selectedSpec?.length_to_flange_target ?? null,
       length_to_flange_tolerance: selectedSpec?.length_to_flange_tolerance ?? null,
-      od_measurement_1: formData.od1 ? parseFloat(formData.od1) : null,
-      od_measurement_2: formData.od2 ? parseFloat(formData.od2) : null,
-      od_measurement_3: formData.od3 ? parseFloat(formData.od3) : null,
-      id_measurement_1: formData.id1 ? parseFloat(formData.id1) : null,
-      id_measurement_2: formData.id2 ? parseFloat(formData.id2) : null,
-      length_measurement_1: formData.length1 ? parseFloat(formData.length1) : null,
       material_appearance: formData.materialAppearance || null,
       dimensional_status: formData.dimensionalStatus,
       heat_treat_approved: formData.heatTreatApproved === 'true',
@@ -321,13 +382,36 @@ export default function BlastExitMeasurement() {
       measurement_method: 'BLAST_EXIT_DYNAMIC_V1'
     }
 
+    const measurementArrays = [
+      { key: 'odMeasurements', prefix: 'od_measurement_' },
+      { key: 'idMeasurements', prefix: 'id_measurement_' },
+      { key: 'lengthMeasurements', prefix: 'length_measurement_' }
+    ]
+
+    const combinedMeasurements = measurementArrays.reduce((accumulator, { key, prefix }) => {
+      const values = formData[key] || []
+
+      values.forEach((rawValue, index) => {
+        const measurementKey = `${prefix}${index + 1}`
+        const numericValue = rawValue === '' ? null : parseFloat(rawValue)
+        accumulator[measurementKey] = Number.isFinite(numericValue) ? numericValue : null
+      })
+
+      return accumulator
+    }, {})
+
+    const payload = {
+      ...measurementData,
+      ...combinedMeasurements
+    }
+
     try {
       const response = await fetch('/api/dimensional-measurements', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
         },
-        body: JSON.stringify(measurementData)
+        body: JSON.stringify(payload)
       })
 
       const result = await response.json().catch(() => ({}))
@@ -339,7 +423,7 @@ export default function BlastExitMeasurement() {
 
       const productLabel = formData.productNumber || 'Measurement'
       setSuccessMessage(
-        `✅ ${productLabel} recorded successfully! Heat: ${measurementData.heat_number} | Status: ${measurementData.dimensional_status} | Heat Treat: ${measurementData.heat_treat_approved ? 'APPROVED' : 'REJECTED'}`
+        `✅ ${productLabel} recorded successfully! Heat: ${payload.heat_number} | Status: ${payload.dimensional_status} | Heat Treat: ${payload.heat_treat_approved ? 'APPROVED' : 'REJECTED'}`
       )
 
       setTimeout(() => {
@@ -369,6 +453,15 @@ export default function BlastExitMeasurement() {
     )
   }
 
+  const cylinderSectionTitle = useMemo(() => {
+    if (!selectedSpec) {
+      return 'Cylinder Measurements'
+    }
+
+    const descriptor = selectedSpec.product_description || selectedSpec.product_number || 'Cylinder'
+    return `${descriptor} - Critical Measurements`
+  }, [selectedSpec])
+
   const cylinderMeasurements = useMemo(() => {
     if (!isCylinder || !selectedSpec) {
       return []
@@ -376,44 +469,55 @@ export default function BlastExitMeasurement() {
 
     const rows = []
 
-    if (selectedSpec.barrel_diameter_target) {
+    if (showBarrelDiameter) {
+      const target = normalizeNumber(selectedSpec.barrel_diameter_target)
       rows.push({
         key: 'barrelDiameter',
         label: 'Barrel Diameter',
-        target: selectedSpec.barrel_diameter_target,
-        tolerance: getTolerance(selectedSpec.barrel_diameter_tolerance, 0.02)
+        target,
+        tolerance: target !== null ? getTolerance(selectedSpec.barrel_diameter_tolerance, 0.02) : null
       })
     }
 
-    if (selectedSpec.flange_diameter_target) {
+    if (showFlangeDiameter) {
+      const target = normalizeNumber(selectedSpec.flange_diameter_target)
       rows.push({
         key: 'flangeDiameter',
         label: 'Flange Diameter',
-        target: selectedSpec.flange_diameter_target,
-        tolerance: getTolerance(selectedSpec.flange_diameter_tolerance, 0.02)
+        target,
+        tolerance: target !== null ? getTolerance(selectedSpec.flange_diameter_tolerance, 0.02) : null
       })
     }
 
-    if (selectedSpec.overall_length_target) {
+    if (showOverallLength) {
+      const target = normalizeNumber(selectedSpec.overall_length_target)
       rows.push({
         key: 'overallLength',
         label: 'Overall Length',
-        target: selectedSpec.overall_length_target,
-        tolerance: getTolerance(selectedSpec.overall_length_tolerance, 0.03)
+        target,
+        tolerance: target !== null ? getTolerance(selectedSpec.overall_length_tolerance, 0.03) : null
       })
     }
 
-    if (showLengthToFlange && selectedSpec.length_to_flange_target) {
+    if (showLengthToFlange) {
+      const target = normalizeNumber(selectedSpec.length_to_flange_target)
       rows.push({
         key: 'lengthToFlange',
         label: 'Length to Flange',
-        target: selectedSpec.length_to_flange_target,
-        tolerance: getTolerance(selectedSpec.length_to_flange_tolerance, 0.02)
+        target,
+        tolerance: target !== null ? getTolerance(selectedSpec.length_to_flange_tolerance, 0.02) : null
       })
     }
 
     return rows
-  }, [isCylinder, selectedSpec, showLengthToFlange])
+  }, [
+    isCylinder,
+    selectedSpec,
+    showBarrelDiameter,
+    showFlangeDiameter,
+    showLengthToFlange,
+    showOverallLength
+  ])
 
   const productFamilyGroups = useMemo(() => {
     const groups = templates.reduce((accumulator, template) => {
@@ -431,6 +535,22 @@ export default function BlastExitMeasurement() {
 
     return groups
   }, [templates])
+
+  const formatTarget = (value) => {
+    if (!Number.isFinite(value)) {
+      return 'Refer to drawing'
+    }
+
+    return value.toFixed(4)
+  }
+
+  const formatTolerance = (value) => {
+    if (!Number.isFinite(value)) {
+      return ''
+    }
+
+    return ` ±${value.toFixed(4)}`
+  }
 
   return (
     <>
@@ -480,10 +600,7 @@ export default function BlastExitMeasurement() {
                     name="productNumber"
                     required
                     value={formData.productNumber}
-                    onChange={(event) => {
-                      handleFieldChange(event)
-                      setToleranceStatuses({ ...initialToleranceStatuses })
-                    }}
+                    onChange={handleFieldChange}
                     className="mt-2 w-full rounded-xl border-2 border-indigo-100 bg-white px-4 py-3 font-semibold text-slate-800 focus:outline-none focus:ring-4 focus:ring-indigo-100"
                   >
                     <option value="">Select Product</option>
@@ -516,13 +633,39 @@ export default function BlastExitMeasurement() {
                         <p className="font-semibold text-slate-700">{selectedSpec.product_description || 'CAT Product'}</p>
                         <p className="mt-1">Family: {selectedSpec.product_family || 'Standard'}</p>
                         <p className="mt-1">
-                          Instructions:{' '}
-                          {selectedSpec.measurement_instructions || 'Standard measurement procedures'}
+                          Instructions: {selectedSpec.measurement_instructions || 'Standard measurement procedures'}
                         </p>
                         <p className="mt-1">
-                          Critical Dimensions:{' '}
-                          {selectedSpec.critical_dimensions || 'Standard dimensions'}
+                          Critical Dimensions: {selectedSpec.critical_dimensions || 'Standard dimensions'}
                         </p>
+                        {selectedSpec.measurement_frequency && (
+                          <p className="mt-1">Measurement Frequency: {selectedSpec.measurement_frequency}</p>
+                        )}
+                        {selectedSpec.tolerance_class && (
+                          <p className="mt-1">Tolerance Class: {selectedSpec.tolerance_class}</p>
+                        )}
+                        {selectedSpec.drawing_reference && (
+                          <p className="mt-1">Drawing Reference: {selectedSpec.drawing_reference}</p>
+                        )}
+                        {(odCount || idCount || lengthCount) && (
+                          <ul className="mt-2 list-inside list-disc text-xs text-slate-500 sm:text-sm">
+                            {odCount ? <li>{odCount} OD measurement{odCount > 1 ? 's' : ''}</li> : null}
+                            {idCount ? <li>{idCount} ID measurement{idCount > 1 ? 's' : ''}</li> : null}
+                            {lengthCount ? <li>{lengthCount} Length measurement{lengthCount > 1 ? 's' : ''}</li> : null}
+                          </ul>
+                        )}
+                        {selectedSpec.special_requirements && (
+                          <p className="mt-3 rounded-xl bg-indigo-50 p-3 text-sm text-indigo-700">
+                            Special Requirements: {selectedSpec.special_requirements}
+                          </p>
+                        )}
+                        {(scrapThreshold !== null || reworkThreshold !== null) && (
+                          <p className="mt-2 text-xs font-semibold text-rose-600">
+                            {scrapThreshold !== null ? `Scrap review ≥ ${scrapThreshold}%` : ''}
+                            {scrapThreshold !== null && reworkThreshold !== null ? ' • ' : ''}
+                            {reworkThreshold !== null ? `Rework review ≥ ${reworkThreshold}%` : ''}
+                          </p>
+                        )}
                       </div>
                       <div className="mt-3 flex flex-wrap gap-2">
                         {selectedSpec.priority_score !== null && selectedSpec.priority_score !== undefined && (
@@ -642,7 +785,7 @@ export default function BlastExitMeasurement() {
 
                 {isCylinder && cylinderMeasurements.length > 0 && (
                   <section className="rounded-2xl border-l-4 border-indigo-400 bg-slate-50 p-6">
-                    <h3 className="text-xl font-semibold text-indigo-500">CAT 536 Series - Cylinder Measurements</h3>
+                    <h3 className="text-xl font-semibold text-indigo-500">{cylinderSectionTitle}</h3>
                     <p className="mt-2 text-sm italic text-slate-600">
                       {selectedSpec?.measurement_instructions || 'Use Pi tape for ODs, calipers for lengths.'}
                     </p>
@@ -651,6 +794,7 @@ export default function BlastExitMeasurement() {
                       {cylinderMeasurements.map((measurement) => {
                         const statusKey = toleranceStatuses[measurement.key]
                         const styles = statusStyles[statusKey] || statusStyles.NONE
+                        const hasTarget = Number.isFinite(measurement.target)
 
                         return (
                           <div
@@ -660,8 +804,8 @@ export default function BlastExitMeasurement() {
                             <div>
                               <div className="font-semibold text-slate-700">{measurement.label}</div>
                               <div className="text-sm text-slate-500">
-                                Target: {measurement.target}
-                                {Number.isFinite(measurement.tolerance) ? ` ±${measurement.tolerance}` : ''}
+                                Target: {formatTarget(measurement.target)}
+                                {formatTolerance(measurement.tolerance)}
                               </div>
                             </div>
                             <div>
@@ -671,7 +815,7 @@ export default function BlastExitMeasurement() {
                                 name={measurement.key}
                                 value={formData[measurement.key]}
                                 onChange={handleFieldChange}
-                                placeholder="0.0000"
+                                placeholder={hasTarget ? measurement.target.toFixed(4) : '0.0000'}
                                 className={`mt-1 w-full rounded-xl border-2 px-4 py-3 text-center text-lg font-semibold transition focus:outline-none focus:ring-4 focus:ring-indigo-100 ${styles.input}`}
                               />
                             </div>
@@ -691,35 +835,86 @@ export default function BlastExitMeasurement() {
                         : `${formData.productNumber} Measurements`}
                     </h3>
                     <p className="mt-2 text-sm italic text-slate-600">
-                      {selectedSpec?.measurement_instructions || 'Standard measurement procedures. Enter dimensions as available.'}
+                      {selectedSpec?.measurement_instructions ||
+                        'Standard measurement procedures. Enter dimensions as available.'}
                     </p>
 
-                    <div className="mt-4 grid gap-4 sm:grid-cols-2">
-                      {[
-                        { id: 'od1', label: 'OD Measurement 1' },
-                        { id: 'od2', label: 'OD Measurement 2' },
-                        { id: 'od3', label: 'OD Measurement 3' },
-                        { id: 'id1', label: 'ID Measurement 1' },
-                        { id: 'id2', label: 'ID Measurement 2' },
-                        { id: 'length1', label: 'Length Measurement' }
-                      ].map((field) => (
-                        <div key={field.id}>
-                          <label className="block text-sm font-semibold text-slate-700" htmlFor={field.id}>
-                            {field.label}
-                          </label>
-                          <input
-                            type="number"
-                            step="0.0001"
-                            id={field.id}
-                            name={field.id}
-                            value={formData[field.id]}
-                            onChange={handleFieldChange}
-                            placeholder="0.0000"
-                            className="mt-2 w-full rounded-xl border-2 border-slate-200 px-4 py-3 focus:outline-none focus:ring-4 focus:ring-indigo-100"
-                          />
-                        </div>
-                      ))}
-                    </div>
+                    {odCount || idCount || lengthCount ? (
+                      <div className="mt-4 grid gap-4 sm:grid-cols-2">
+                        {formData.odMeasurements.map((value, index) => {
+                          const fieldId = `od-measurement-${index + 1}`
+                          return (
+                            <div key={fieldId}>
+                              <label className="block text-sm font-semibold text-slate-700" htmlFor={fieldId}>
+                                OD Measurement {index + 1}
+                              </label>
+                              <input
+                                type="number"
+                                step="0.0001"
+                                id={fieldId}
+                                name={fieldId}
+                                value={value}
+                                onChange={(event) =>
+                                  handleMeasurementChange('odMeasurements', index, event.target.value)
+                                }
+                                placeholder="0.0000"
+                                className="mt-2 w-full rounded-xl border-2 border-slate-200 px-4 py-3 focus:outline-none focus:ring-4 focus:ring-indigo-100"
+                              />
+                            </div>
+                          )
+                        })}
+
+                        {formData.idMeasurements.map((value, index) => {
+                          const fieldId = `id-measurement-${index + 1}`
+                          return (
+                            <div key={fieldId}>
+                              <label className="block text-sm font-semibold text-slate-700" htmlFor={fieldId}>
+                                ID Measurement {index + 1}
+                              </label>
+                              <input
+                                type="number"
+                                step="0.0001"
+                                id={fieldId}
+                                name={fieldId}
+                                value={value}
+                                onChange={(event) =>
+                                  handleMeasurementChange('idMeasurements', index, event.target.value)
+                                }
+                                placeholder="0.0000"
+                                className="mt-2 w-full rounded-xl border-2 border-slate-200 px-4 py-3 focus:outline-none focus:ring-4 focus:ring-indigo-100"
+                              />
+                            </div>
+                          )
+                        })}
+
+                        {formData.lengthMeasurements.map((value, index) => {
+                          const fieldId = `length-measurement-${index + 1}`
+                          return (
+                            <div key={fieldId}>
+                              <label className="block text-sm font-semibold text-slate-700" htmlFor={fieldId}>
+                                Length Measurement {index + 1}
+                              </label>
+                              <input
+                                type="number"
+                                step="0.0001"
+                                id={fieldId}
+                                name={fieldId}
+                                value={value}
+                                onChange={(event) =>
+                                  handleMeasurementChange('lengthMeasurements', index, event.target.value)
+                                }
+                                placeholder="0.0000"
+                                className="mt-2 w-full rounded-xl border-2 border-slate-200 px-4 py-3 focus:outline-none focus:ring-4 focus:ring-indigo-100"
+                              />
+                            </div>
+                          )
+                        })}
+                      </div>
+                    ) : (
+                      <div className="mt-4 rounded-xl bg-white px-4 py-5 text-sm text-slate-600">
+                        No dimensional inputs are configured for this template. Use the notes section to capture any findings.
+                      </div>
+                    )}
                   </section>
                 )}
 
