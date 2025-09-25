@@ -1,6 +1,5 @@
 import { useMemo, useState } from 'react'
 import Head from 'next/head'
-import { supabase } from '../lib/supabase'
 
 const toleranceConfig = {
   barrelDiameter: { target: 11.569, tolerance: 0.02 },
@@ -247,19 +246,29 @@ export default function BlastExitMeasurement() {
       measurement_method: 'MANUAL_ENTRY'
     }
 
-    const { error } = await supabase
-      .from('dimensional_measurements')
-      .insert([measurementData])
+    try {
+      const response = await fetch('/api/dimensional-measurements', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(measurementData)
+      })
 
-    if (error) {
+      const result = await response.json().catch(() => ({}))
+
+      if (!response.ok) {
+        const message = result?.error || result?.message || 'Error submitting measurement. Please try again.'
+        throw new Error(message)
+      }
+
+      setSuccessMessage('Measurement recorded successfully!')
+      resetForm()
+    } catch (error) {
       setErrorMessage(error.message || 'Error submitting measurement. Please try again.')
+    } finally {
       setIsSubmitting(false)
-      return
     }
-
-    setSuccessMessage('Measurement recorded successfully!')
-    setIsSubmitting(false)
-    resetForm()
   }
 
   const renderStatusBadge = (statusKey) => {
