@@ -855,16 +855,16 @@ export default function BlastExitMeasurement() {
       <Head>
         <title>📏 Blast Exit Measurement - Dynamic Products</title>
       </Head>
-      <div className="min-h-screen bg-gradient-to-br from-indigo-400 via-purple-500 to-purple-700 px-4 py-10">
+      <div className="min-h-screen bg-gradient-to-br from-spuncast-navy via-spuncast-navyDark to-spuncast-red px-4 py-10">
         <div className="mx-auto max-w-5xl">
-          <div className="rounded-3xl bg-white px-6 py-8 shadow-2xl sm:px-10 sm:py-10">
-            <header className="mb-8 text-center text-gray-800">
-              <h1 className="text-3xl font-bold text-indigo-500 sm:text-4xl">📏 Blast Exit Measurement</h1>
+          <div className="rounded-3xl border border-white/60 bg-white px-6 py-8 shadow-brand sm:px-10 sm:py-10">
+            <header className="mb-8 text-center text-spuncast-slate">
+              <h1 className="text-3xl font-bold text-spuncast-navy sm:text-4xl">📏 Blast Exit Measurement</h1>
               <p className="mt-2 text-lg text-slate-600">Dimensional Control System - Phase 1</p>
             </header>
 
             {loadingTemplates && (
-              <div className="mb-6 rounded-2xl border border-indigo-100 bg-indigo-50 px-4 py-5 text-center text-indigo-600">
+              <div className="mb-6 rounded-2xl border border-spuncast-navy/10 bg-spuncast-sky px-4 py-5 text-center text-spuncast-navy">
                 🔄 Loading CAT products from database...
               </div>
             )}
@@ -895,7 +895,7 @@ export default function BlastExitMeasurement() {
 
             {!loadingTemplates && templates.length > 0 && (
               <form onSubmit={handleSubmit} className="space-y-8">
-                <section className="rounded-2xl border-2 border-indigo-100 bg-indigo-50/70 p-6">
+                <section className="rounded-2xl border-2 border-spuncast-navy/10 bg-spuncast-sky/70 p-6">
                   <label className="block text-sm font-semibold text-slate-700" htmlFor="productNumber">
                     Product Number <span className="text-rose-500">*</span>
                   </label>
@@ -905,7 +905,7 @@ export default function BlastExitMeasurement() {
                     required
                     value={formData.productNumber}
                     onChange={handleFieldChange}
-                    className="mt-2 w-full rounded-xl border-2 border-indigo-100 bg-white px-4 py-3 font-semibold text-slate-800 focus:outline-none focus:ring-4 focus:ring-indigo-100"
+                    className="mt-2 w-full rounded-xl border-2 border-spuncast-navy/10 bg-white px-4 py-3 font-semibold text-slate-800 focus:outline-none focus:ring-4 focus:ring-spuncast-navy/20"
                   >
                     <option value="">Select Product</option>
                     {Object.entries(productFamilyGroups).map(([family, familyTemplates]) => {
@@ -959,7 +959,7 @@ export default function BlastExitMeasurement() {
                           </ul>
                         )}
                         {selectedSpec.special_requirements && (
-                          <p className="mt-3 rounded-xl bg-indigo-50 p-3 text-sm text-indigo-700">
+                          <p className="mt-3 rounded-xl bg-spuncast-sky p-3 text-sm text-spuncast-navy">
                             Special Requirements: {selectedSpec.special_requirements}
                           </p>
                         )}
@@ -986,7 +986,7 @@ export default function BlastExitMeasurement() {
                           </span>
                         )}
                         {selectedSpec.volume_classification && (
-                          <span className="rounded-full bg-indigo-100 px-3 py-1 text-xs font-semibold text-indigo-700">
+                          <span className="rounded-full bg-spuncast-navy/10 px-3 py-1 text-xs font-semibold text-spuncast-navy">
                             {selectedSpec.volume_classification} Volume
                           </span>
                         )}
@@ -1009,7 +1009,7 @@ export default function BlastExitMeasurement() {
                         value={formData.heatNumber}
                         onChange={handleFieldChange}
                         placeholder="Enter heat number"
-                        className="mt-2 w-full rounded-xl border-2 border-slate-200 px-4 py-3 focus:outline-none focus:ring-4 focus:ring-indigo-100"
+                        className="mt-2 w-full rounded-xl border-2 border-slate-200 px-4 py-3 focus:outline-none focus:ring-4 focus:ring-spuncast-navy/20"
                       />
                     </div>
                     <div>
@@ -1024,7 +1024,7 @@ export default function BlastExitMeasurement() {
                         value={formData.operator}
                         onChange={handleFieldChange}
                         placeholder="Your name"
-                        className="mt-2 w-full rounded-xl border-2 border-slate-200 px-4 py-3 focus:outline-none focus:ring-4 focus:ring-indigo-100"
+                        className="mt-2 w-full rounded-xl border-2 border-slate-200 px-4 py-3 focus:outline-none focus:ring-4 focus:ring-spuncast-navy/20"
                       />
                     </div>
                   </div>
@@ -1040,7 +1040,7 @@ export default function BlastExitMeasurement() {
                         value={formData.trackingNumber}
                         onChange={handleFieldChange}
                         placeholder="Optional"
-                        className="mt-2 w-full rounded-xl border-2 border-slate-200 px-4 py-3 focus:outline-none focus:ring-4 focus:ring-indigo-100"
+                        className="mt-2 w-full rounded-xl border-2 border-slate-200 px-4 py-3 focus:outline-none focus:ring-4 focus:ring-spuncast-navy/20"
                       />
                     </div>
                     <div>
@@ -1052,7 +1052,7 @@ export default function BlastExitMeasurement() {
                         name="shift"
                         value={formData.shift}
                         onChange={handleFieldChange}
-                        className="mt-2 w-full rounded-xl border-2 border-slate-200 px-4 py-3 focus:outline-none focus:ring-4 focus:ring-indigo-100"
+                        className="mt-2 w-full rounded-xl border-2 border-slate-200 px-4 py-3 focus:outline-none focus:ring-4 focus:ring-spuncast-navy/20"
                       >
                         <option value="">Select Shift</option>
                         <option value="1">1st Shift</option>
@@ -1067,29 +1067,29 @@ export default function BlastExitMeasurement() {
                   <button
                     type="button"
                     onClick={quickFillHeat}
-                    className="rounded-full bg-indigo-500 px-4 py-2 text-sm font-semibold text-white transition hover:bg-indigo-600"
+                    className="rounded-full bg-spuncast-navy px-4 py-2 text-sm font-semibold text-white transition hover:bg-spuncast-navyDark"
                   >
                     ⚡ Quick Heat#
                   </button>
                   <button
                     type="button"
                     onClick={loadLastMeasurement}
-                    className="rounded-full bg-indigo-500 px-4 py-2 text-sm font-semibold text-white transition hover:bg-indigo-600"
+                    className="rounded-full bg-spuncast-navy px-4 py-2 text-sm font-semibold text-white transition hover:bg-spuncast-navyDark"
                   >
                     🔄 Load Last
                   </button>
                   <button
                     type="button"
                     onClick={showInstructions}
-                    className="rounded-full bg-indigo-500 px-4 py-2 text-sm font-semibold text-white transition hover:bg-indigo-600"
+                    className="rounded-full bg-spuncast-navy px-4 py-2 text-sm font-semibold text-white transition hover:bg-spuncast-navyDark"
                   >
                     📖 Instructions
                   </button>
                 </section>
 
                 {isCylinder && cylinderMeasurements.length > 0 && (
-                  <section className="rounded-2xl border-l-4 border-indigo-400 bg-slate-50 p-6">
-                    <h3 className="text-xl font-semibold text-indigo-500">{cylinderSectionTitle}</h3>
+                  <section className="rounded-2xl border-l-4 border-spuncast-navy bg-slate-50 p-6">
+                    <h3 className="text-xl font-semibold text-spuncast-navy">{cylinderSectionTitle}</h3>
                     <p className="mt-2 text-sm italic text-slate-600">
                       {selectedSpec?.measurement_instructions || 'Use Pi tape for ODs, calipers for lengths.'}
                     </p>
@@ -1120,7 +1120,7 @@ export default function BlastExitMeasurement() {
                                 value={formData[measurement.key]}
                                 onChange={handleFieldChange}
                                 placeholder={hasTarget ? measurement.target.toFixed(4) : '0.0000'}
-                                className={`mt-1 w-full rounded-xl border-2 px-4 py-3 text-center text-lg font-semibold transition focus:outline-none focus:ring-4 focus:ring-indigo-100 ${styles.input}`}
+                                className={`mt-1 w-full rounded-xl border-2 px-4 py-3 text-center text-lg font-semibold transition focus:outline-none focus:ring-4 focus:ring-spuncast-navy/20 ${styles.input}`}
                               />
                             </div>
                             <div className="flex justify-end">{renderStatusBadge(statusKey)}</div>
@@ -1132,8 +1132,8 @@ export default function BlastExitMeasurement() {
                 )}
 
                 {!isCylinder && formData.productNumber && (
-                  <section className="rounded-2xl border-l-4 border-indigo-400 bg-slate-50 p-6">
-                    <h3 className="text-xl font-semibold text-indigo-500">
+                  <section className="rounded-2xl border-l-4 border-spuncast-navy bg-slate-50 p-6">
+                    <h3 className="text-xl font-semibold text-spuncast-navy">
                       {formData.productNumber === 'OTHER'
                         ? 'Standard Measurements'
                         : `${formData.productNumber} Measurements`}
@@ -1162,7 +1162,7 @@ export default function BlastExitMeasurement() {
                                   handleMeasurementChange('odMeasurements', index, event.target.value)
                                 }
                                 placeholder="0.0000"
-                                className="mt-2 w-full rounded-xl border-2 border-slate-200 px-4 py-3 focus:outline-none focus:ring-4 focus:ring-indigo-100"
+                                className="mt-2 w-full rounded-xl border-2 border-slate-200 px-4 py-3 focus:outline-none focus:ring-4 focus:ring-spuncast-navy/20"
                               />
                             </div>
                           )
@@ -1185,7 +1185,7 @@ export default function BlastExitMeasurement() {
                                   handleMeasurementChange('idMeasurements', index, event.target.value)
                                 }
                                 placeholder="0.0000"
-                                className="mt-2 w-full rounded-xl border-2 border-slate-200 px-4 py-3 focus:outline-none focus:ring-4 focus:ring-indigo-100"
+                                className="mt-2 w-full rounded-xl border-2 border-slate-200 px-4 py-3 focus:outline-none focus:ring-4 focus:ring-spuncast-navy/20"
                               />
                             </div>
                           )
@@ -1208,7 +1208,7 @@ export default function BlastExitMeasurement() {
                                   handleMeasurementChange('lengthMeasurements', index, event.target.value)
                                 }
                                 placeholder="0.0000"
-                                className="mt-2 w-full rounded-xl border-2 border-slate-200 px-4 py-3 focus:outline-none focus:ring-4 focus:ring-indigo-100"
+                                className="mt-2 w-full rounded-xl border-2 border-slate-200 px-4 py-3 focus:outline-none focus:ring-4 focus:ring-spuncast-navy/20"
                               />
                             </div>
                           )
@@ -1222,8 +1222,8 @@ export default function BlastExitMeasurement() {
                   </section>
                 )}
 
-                <section className="rounded-2xl border-l-4 border-indigo-400 bg-slate-50 p-6">
-                  <h3 className="text-xl font-semibold text-indigo-500">Quality Assessment</h3>
+                <section className="rounded-2xl border-l-4 border-spuncast-navy bg-slate-50 p-6">
+                  <h3 className="text-xl font-semibold text-spuncast-navy">Quality Assessment</h3>
                   <div className="mt-4 grid gap-4 sm:grid-cols-2">
                     <div>
                       <label className="block text-sm font-semibold text-slate-700" htmlFor="materialAppearance">
@@ -1234,7 +1234,7 @@ export default function BlastExitMeasurement() {
                         name="materialAppearance"
                         value={formData.materialAppearance}
                         onChange={handleFieldChange}
-                        className="mt-2 w-full rounded-xl border-2 border-slate-200 px-4 py-3 focus:outline-none focus:ring-4 focus:ring-indigo-100"
+                        className="mt-2 w-full rounded-xl border-2 border-slate-200 px-4 py-3 focus:outline-none focus:ring-4 focus:ring-spuncast-navy/20"
                       >
                         <option value="">Select Condition</option>
                         <option value="EXCELLENT">Excellent - Perfect Cast</option>
@@ -1253,7 +1253,7 @@ export default function BlastExitMeasurement() {
                         required
                         value={formData.dimensionalStatus}
                         onChange={handleFieldChange}
-                        className="mt-2 w-full rounded-xl border-2 border-slate-200 px-4 py-3 focus:outline-none focus:ring-4 focus:ring-indigo-100"
+                        className="mt-2 w-full rounded-xl border-2 border-slate-200 px-4 py-3 focus:outline-none focus:ring-4 focus:ring-spuncast-navy/20"
                       >
                         <option value="PASS">✅ PASS - All dimensions OK</option>
                         <option value="MARGINAL">⚠️ MARGINAL - Close to limits</option>
@@ -1270,7 +1270,7 @@ export default function BlastExitMeasurement() {
                         required
                         value={formData.heatTreatApproved}
                         onChange={handleFieldChange}
-                        className="mt-2 w-full rounded-xl border-2 border-slate-200 px-4 py-3 focus:outline-none focus:ring-4 focus:ring-indigo-100"
+                        className="mt-2 w-full rounded-xl border-2 border-slate-200 px-4 py-3 focus:outline-none focus:ring-4 focus:ring-spuncast-navy/20"
                       >
                         <option value="true">✅ APPROVED - Send to Heat Treat</option>
                         <option value="false">❌ REJECTED - Hold/Scrap</option>
@@ -1285,7 +1285,7 @@ export default function BlastExitMeasurement() {
                         name="surfaceCondition"
                         value={formData.surfaceCondition}
                         onChange={handleFieldChange}
-                        className="mt-2 w-full rounded-xl border-2 border-slate-200 px-4 py-3 focus:outline-none focus:ring-4 focus:ring-indigo-100"
+                        className="mt-2 w-full rounded-xl border-2 border-slate-200 px-4 py-3 focus:outline-none focus:ring-4 focus:ring-spuncast-navy/20"
                       >
                         <option value="">Select Condition</option>
                         <option value="SMOOTH">Smooth - No Issues</option>
@@ -1309,7 +1309,7 @@ export default function BlastExitMeasurement() {
                     value={formData.notes}
                     onChange={handleFieldChange}
                     placeholder="Record observations about casting quality, measurement issues, or recommendations..."
-                    className="mt-2 w-full rounded-2xl border-2 border-slate-200 px-4 py-3 focus:outline-none focus:ring-4 focus:ring-indigo-100"
+                    className="mt-2 w-full rounded-2xl border-2 border-slate-200 px-4 py-3 focus:outline-none focus:ring-4 focus:ring-spuncast-navy/20"
                   />
                 </section>
 
@@ -1317,7 +1317,7 @@ export default function BlastExitMeasurement() {
                   <button
                     type="submit"
                     disabled={isSubmitting}
-                    className="w-full rounded-full bg-gradient-to-r from-indigo-500 to-purple-500 px-6 py-4 text-lg font-semibold uppercase tracking-wide text-white shadow-lg transition hover:shadow-xl disabled:cursor-not-allowed disabled:from-slate-300 disabled:to-slate-400"
+                    className="w-full rounded-full bg-gradient-to-r from-spuncast-navy to-spuncast-red px-6 py-4 text-lg font-semibold uppercase tracking-wide text-white shadow-lg transition hover:shadow-xl disabled:cursor-not-allowed disabled:from-slate-300 disabled:to-slate-400"
                   >
                     {isSubmitting ? '⏳ Submitting...' : '📏 Submit Measurement'}
                   </button>

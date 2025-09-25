@@ -376,21 +376,21 @@ const QRGeneratorPage = () => {
         <title>QR Code Generator</title>
       </Head>
 
-      <div className="min-h-screen bg-gradient-to-br from-indigo-500 to-purple-600 p-6">
-        <div className="mx-auto max-w-5xl rounded-3xl bg-white p-8 shadow-2xl">
+      <div className="min-h-screen bg-gradient-to-br from-spuncast-navy via-spuncast-navyDark to-spuncast-red p-6">
+        <div className="mx-auto max-w-5xl rounded-3xl border border-white/60 bg-white p-8 shadow-brand">
           <div className="text-center">
-            <h1 className="text-3xl font-bold text-indigo-600">🏷️ QR Code Generator</h1>
-            <p className="mt-2 text-gray-600">Generate QR codes for equipment and custom URLs</p>
+            <h1 className="text-3xl font-bold text-spuncast-navy">🏷️ QR Code Generator</h1>
+            <p className="mt-2 text-spuncast-slate/80">Generate QR codes for equipment and custom URLs</p>
           </div>
 
-          <div className="mt-8 rounded-xl bg-indigo-50 p-2">
-            <div className="grid grid-cols-2 gap-2 text-sm font-semibold text-indigo-500">
+          <div className="mt-8 rounded-xl bg-spuncast-sky p-2">
+            <div className="grid grid-cols-2 gap-2 text-sm font-semibold text-spuncast-navy">
               <button
                 type="button"
                 className={`rounded-lg px-4 py-3 transition-all ${
                   activeTab === 'equipment'
-                    ? 'bg-indigo-500 text-white shadow'
-                    : 'hover:bg-indigo-100'
+                    ? 'bg-spuncast-navy text-white shadow'
+                    : 'hover:bg-spuncast-sky/80'
                 }`}
                 onClick={() => setActiveTab('equipment')}
               >
@@ -400,8 +400,8 @@ const QRGeneratorPage = () => {
                 type="button"
                 className={`rounded-lg px-4 py-3 transition-all ${
                   activeTab === 'custom'
-                    ? 'bg-indigo-500 text-white shadow'
-                    : 'hover:bg-indigo-100'
+                    ? 'bg-spuncast-navy text-white shadow'
+                    : 'hover:bg-spuncast-sky/80'
                 }`}
                 onClick={() => setActiveTab('custom')}
               >
@@ -419,7 +419,7 @@ const QRGeneratorPage = () => {
           <div className="mt-6">
             <section className={activeTab === 'equipment' ? 'block' : 'hidden'}>
               {loading ? (
-                <div className="rounded-2xl bg-indigo-50 p-10 text-center text-indigo-600">
+                <div className="rounded-2xl bg-spuncast-sky p-10 text-center text-spuncast-navy">
                   🔄 Loading equipment from database...
                 </div>
               ) : error ? (
@@ -429,7 +429,7 @@ const QRGeneratorPage = () => {
               ) : (
                 <div className="space-y-6">
                   <div>
-                    <label htmlFor="equipmentFilter" className="block text-sm font-semibold text-gray-700">
+                    <label htmlFor="equipmentFilter" className="block text-sm font-semibold text-spuncast-slate">
                       Filter Equipment
                     </label>
                     <input
@@ -438,13 +438,13 @@ const QRGeneratorPage = () => {
                       value={filter}
                       onChange={event => setFilter(event.target.value)}
                       placeholder="Search by equipment number, description, or work center..."
-                      className="mt-2 w-full rounded-xl border-2 border-indigo-100 p-3 text-sm shadow-sm transition focus:border-indigo-400 focus:outline-none focus:ring-2 focus:ring-indigo-100"
+                      className="mt-2 w-full rounded-xl border-2 border-spuncast-navy/10 p-3 text-sm shadow-sm transition focus:border-spuncast-navy focus:outline-none focus:ring-2 focus:ring-spuncast-navy/20"
                     />
                   </div>
 
                   <div className="space-y-3">
                     {filteredEquipment.length === 0 ? (
-                      <p className="rounded-2xl bg-indigo-50 p-6 text-center text-sm text-indigo-500">
+                      <p className="rounded-2xl bg-spuncast-sky p-6 text-center text-sm text-spuncast-navy">
                         No active equipment found.
                       </p>
                     ) : (
@@ -459,20 +459,20 @@ const QRGeneratorPage = () => {
                             onClick={() => handleSelectEquipment(item)}
                             className={`w-full rounded-2xl border-2 p-4 text-left transition-all ${
                               isSelected
-                                ? 'border-indigo-400 bg-indigo-50 shadow'
-                                : 'border-indigo-100 bg-white hover:-translate-y-0.5 hover:border-indigo-300 hover:shadow'
+                                ? 'border-spuncast-navy bg-spuncast-sky shadow'
+                                : 'border-spuncast-navy/10 bg-white hover:-translate-y-0.5 hover:border-spuncast-navy/40 hover:shadow'
                             }`}
                           >
                             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                               <div>
-                                <h3 className="text-lg font-semibold text-gray-800">
+                                <h3 className="text-lg font-semibold text-spuncast-navy">
                                   {item.equipment_number} - {item.description}
                                 </h3>
-                                <p className="text-sm text-gray-600">
+                                <p className="text-sm text-spuncast-slate/80">
                                   Work Center: {item.work_center || 'N/A'} | Type: {item.equipment_type || 'N/A'} | Location: {item.location || 'N/A'}
                                 </p>
                               </div>
-                              <div className="text-right text-xs text-gray-500 sm:text-sm">
+                              <div className="text-right text-xs text-spuncast-slate/70 sm:text-sm">
                                 <div className={statusClass}>{item.status || 'ACTIVE'}</div>
                                 <div>ID: {item.id}</div>
                               </div>
@@ -484,24 +484,24 @@ const QRGeneratorPage = () => {
                   </div>
 
                   {selectedEquipment && (
-                    <div className="space-y-6 rounded-2xl bg-indigo-50 p-6">
+                    <div className="space-y-6 rounded-2xl bg-spuncast-sky p-6">
                       <div className="rounded-2xl bg-white p-5 shadow-sm">
-                        <h4 className="text-lg font-semibold text-gray-800">{formatEquipmentTitle(selectedEquipment)}</h4>
-                        <dl className="mt-3 grid grid-cols-1 gap-3 text-sm text-gray-600 sm:grid-cols-2">
+                        <h4 className="text-lg font-semibold text-spuncast-navy">{formatEquipmentTitle(selectedEquipment)}</h4>
+                        <dl className="mt-3 grid grid-cols-1 gap-3 text-sm text-spuncast-slate/80 sm:grid-cols-2">
                           <div>
-                            <dt className="font-medium text-gray-700">Work Center</dt>
+                            <dt className="font-medium text-spuncast-slate">Work Center</dt>
                             <dd>{selectedEquipment.work_center || 'N/A'}</dd>
                           </div>
                           <div>
-                            <dt className="font-medium text-gray-700">Type</dt>
+                            <dt className="font-medium text-spuncast-slate">Type</dt>
                             <dd>{selectedEquipment.equipment_type || 'N/A'}</dd>
                           </div>
                           <div>
-                            <dt className="font-medium text-gray-700">Location</dt>
+                            <dt className="font-medium text-spuncast-slate">Location</dt>
                             <dd>{selectedEquipment.location || 'N/A'}</dd>
                           </div>
                           <div>
-                            <dt className="font-medium text-gray-700">Status</dt>
+                            <dt className="font-medium text-spuncast-slate">Status</dt>
                             <dd className={statusColor(selectedEquipment.status)}>{selectedEquipment.status || 'ACTIVE'}</dd>
                           </div>
                         </dl>
@@ -509,14 +509,14 @@ const QRGeneratorPage = () => {
 
                       <div className="grid gap-5 sm:grid-cols-2">
                         <div>
-                          <label htmlFor="qrType" className="block text-sm font-semibold text-gray-700">
+                          <label htmlFor="qrType" className="block text-sm font-semibold text-spuncast-slate">
                             QR Code Type
                           </label>
                           <select
                             id="qrType"
                             value={qrType}
                             onChange={event => setQrType(event.target.value)}
-                            className="mt-2 w-full rounded-xl border-2 border-indigo-100 p-3 text-sm shadow-sm transition focus:border-indigo-400 focus:outline-none focus:ring-2 focus:ring-indigo-100"
+                            className="mt-2 w-full rounded-xl border-2 border-spuncast-navy/10 p-3 text-sm shadow-sm transition focus:border-spuncast-navy focus:outline-none focus:ring-2 focus:ring-spuncast-navy/20"
                           >
                             <option value="measurement">📏 Measurement App</option>
                             <option value="tool-change">🔧 Tool Change App</option>
@@ -524,7 +524,7 @@ const QRGeneratorPage = () => {
                           </select>
                         </div>
                         <div>
-                          <label htmlFor="baseUrl" className="block text-sm font-semibold text-gray-700">
+                          <label htmlFor="baseUrl" className="block text-sm font-semibold text-spuncast-slate">
                             Base URL
                           </label>
                           <input
@@ -532,14 +532,14 @@ const QRGeneratorPage = () => {
                             type="text"
                             value={baseUrl}
                             onChange={event => setBaseUrl(event.target.value)}
-                            className="mt-2 w-full rounded-xl border-2 border-indigo-100 p-3 text-sm shadow-sm transition focus:border-indigo-400 focus:outline-none focus:ring-2 focus:ring-indigo-100"
+                            className="mt-2 w-full rounded-xl border-2 border-spuncast-navy/10 p-3 text-sm shadow-sm transition focus:border-spuncast-navy focus:outline-none focus:ring-2 focus:ring-spuncast-navy/20"
                           />
                         </div>
                       </div>
 
                       <button
                         type="button"
-                        className="inline-flex items-center justify-center rounded-full bg-gradient-to-r from-indigo-500 to-purple-500 px-6 py-3 font-semibold text-white shadow-lg transition hover:translate-y-[-2px] hover:shadow-xl"
+                        className="inline-flex items-center justify-center rounded-full bg-gradient-to-r from-spuncast-navy to-spuncast-red px-6 py-3 font-semibold text-white shadow-lg transition hover:translate-y-[-2px] hover:shadow-xl"
                         onClick={handleGenerateEquipmentQR}
                       >
                         🎯 Generate QR Code
@@ -549,8 +549,8 @@ const QRGeneratorPage = () => {
                         className="rounded-2xl bg-white p-6 text-center shadow-lg"
                         style={{ display: equipmentQrGenerated ? 'block' : 'none' }}
                       >
-                        <h3 className="text-lg font-semibold text-gray-800">{equipmentQrTitle}</h3>
-                        <div className="mt-3 rounded-xl border-2 border-indigo-100 bg-indigo-50 p-3 text-sm text-indigo-600">
+                        <h3 className="text-lg font-semibold text-spuncast-navy">{equipmentQrTitle}</h3>
+                        <div className="mt-3 rounded-xl border-2 border-spuncast-navy/10 bg-spuncast-sky p-3 text-sm text-spuncast-navy">
                           {generatedUrl}
                         </div>
                         <div className="mt-4 flex justify-center">
@@ -559,21 +559,21 @@ const QRGeneratorPage = () => {
                         <div className="mt-5 flex flex-wrap justify-center gap-3">
                           <button
                             type="button"
-                            className="rounded-full bg-indigo-500 px-4 py-2 text-sm font-semibold text-white shadow hover:bg-indigo-600"
+                            className="rounded-full bg-spuncast-navy px-4 py-2 text-sm font-semibold text-white shadow hover:bg-spuncast-navyDark"
                             onClick={handleDownloadEquipmentQR}
                           >
                             💾 Download PNG
                           </button>
                           <button
                             type="button"
-                            className="rounded-full bg-indigo-500 px-4 py-2 text-sm font-semibold text-white shadow hover:bg-indigo-600"
+                            className="rounded-full bg-spuncast-navy px-4 py-2 text-sm font-semibold text-white shadow hover:bg-spuncast-navyDark"
                             onClick={handlePrintEquipmentQR}
                           >
                             🖨️ Print
                           </button>
                           <button
                             type="button"
-                            className="rounded-full bg-indigo-500 px-4 py-2 text-sm font-semibold text-white shadow hover:bg-indigo-600"
+                            className="rounded-full bg-spuncast-navy px-4 py-2 text-sm font-semibold text-white shadow hover:bg-spuncast-navyDark"
                             onClick={handleCopyEquipmentUrl}
                           >
                             📋 Copy URL
@@ -587,9 +587,9 @@ const QRGeneratorPage = () => {
             </section>
 
             <section className={activeTab === 'custom' ? 'block' : 'hidden'}>
-              <div className="space-y-6 rounded-2xl bg-indigo-50 p-6">
+              <div className="space-y-6 rounded-2xl bg-spuncast-sky p-6">
                 <div>
-                  <label htmlFor="customUrl" className="block text-sm font-semibold text-gray-700">
+                  <label htmlFor="customUrl" className="block text-sm font-semibold text-spuncast-slate">
                     Custom URL
                   </label>
                   <input
@@ -601,12 +601,12 @@ const QRGeneratorPage = () => {
                       setCustomQrGenerated(false)
                     }}
                     placeholder="Enter any URL..."
-                    className="mt-2 w-full rounded-xl border-2 border-indigo-100 p-3 text-sm shadow-sm transition focus:border-indigo-400 focus:outline-none focus:ring-2 focus:ring-indigo-100"
+                    className="mt-2 w-full rounded-xl border-2 border-spuncast-navy/10 p-3 text-sm shadow-sm transition focus:border-spuncast-navy focus:outline-none focus:ring-2 focus:ring-spuncast-navy/20"
                   />
                 </div>
 
                 <div>
-                  <label htmlFor="customTitle" className="block text-sm font-semibold text-gray-700">
+                  <label htmlFor="customTitle" className="block text-sm font-semibold text-spuncast-slate">
                     QR Code Title (optional)
                   </label>
                   <input
@@ -618,13 +618,13 @@ const QRGeneratorPage = () => {
                       setCustomQrGenerated(false)
                     }}
                     placeholder="Title to display with the QR code"
-                    className="mt-2 w-full rounded-xl border-2 border-indigo-100 p-3 text-sm shadow-sm transition focus:border-indigo-400 focus:outline-none focus:ring-2 focus:ring-indigo-100"
+                    className="mt-2 w-full rounded-xl border-2 border-spuncast-navy/10 p-3 text-sm shadow-sm transition focus:border-spuncast-navy focus:outline-none focus:ring-2 focus:ring-spuncast-navy/20"
                   />
                 </div>
 
                 <button
                   type="button"
-                  className="inline-flex items-center justify-center rounded-full bg-gradient-to-r from-indigo-500 to-purple-500 px-6 py-3 font-semibold text-white shadow-lg transition hover:translate-y-[-2px] hover:shadow-xl"
+                  className="inline-flex items-center justify-center rounded-full bg-gradient-to-r from-spuncast-navy to-spuncast-red px-6 py-3 font-semibold text-white shadow-lg transition hover:translate-y-[-2px] hover:shadow-xl"
                   onClick={handleGenerateCustomQR}
                 >
                   🎯 Generate Custom QR
@@ -634,8 +634,8 @@ const QRGeneratorPage = () => {
                   className="rounded-2xl bg-white p-6 text-center shadow-lg"
                   style={{ display: customQrGenerated ? 'block' : 'none' }}
                 >
-                  <h3 className="text-lg font-semibold text-gray-800">{customQrTitle}</h3>
-                  <div className="mt-3 rounded-xl border-2 border-indigo-100 bg-indigo-50 p-3 text-sm text-indigo-600">
+                  <h3 className="text-lg font-semibold text-spuncast-navy">{customQrTitle}</h3>
+                  <div className="mt-3 rounded-xl border-2 border-spuncast-navy/10 bg-spuncast-sky p-3 text-sm text-spuncast-navy">
                     {customGeneratedUrl}
                   </div>
                   <div className="mt-4 flex justify-center">
@@ -644,21 +644,21 @@ const QRGeneratorPage = () => {
                   <div className="mt-5 flex flex-wrap justify-center gap-3">
                     <button
                       type="button"
-                      className="rounded-full bg-indigo-500 px-4 py-2 text-sm font-semibold text-white shadow hover:bg-indigo-600"
+                      className="rounded-full bg-spuncast-navy px-4 py-2 text-sm font-semibold text-white shadow hover:bg-spuncast-navyDark"
                       onClick={handleDownloadCustomQR}
                     >
                       💾 Download PNG
                     </button>
                     <button
                       type="button"
-                      className="rounded-full bg-indigo-500 px-4 py-2 text-sm font-semibold text-white shadow hover:bg-indigo-600"
+                      className="rounded-full bg-spuncast-navy px-4 py-2 text-sm font-semibold text-white shadow hover:bg-spuncast-navyDark"
                       onClick={handlePrintCustomQR}
                     >
                       🖨️ Print
                     </button>
                     <button
                       type="button"
-                      className="rounded-full bg-indigo-500 px-4 py-2 text-sm font-semibold text-white shadow hover:bg-indigo-600"
+                      className="rounded-full bg-spuncast-navy px-4 py-2 text-sm font-semibold text-white shadow hover:bg-spuncast-navyDark"
                       onClick={handleCopyCustomUrl}
                     >
                       📋 Copy URL
@@ -670,7 +670,7 @@ const QRGeneratorPage = () => {
           </div>
 
           <div className="mt-8 text-center">
-            <Link href="/" className="font-semibold text-indigo-600 transition hover:text-indigo-800">
+            <Link href="/" className="font-semibold text-spuncast-navy transition hover:text-spuncast-red">
               &larr; Back to Tool Change Form
             </Link>
           </div>

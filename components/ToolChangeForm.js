@@ -610,11 +610,11 @@ const ToolChangeForm = () => {
 
   if (toolsLoading) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+      <div className="min-h-screen bg-spuncast-sky flex items-center justify-center">
         <div className="text-center">
-          <RefreshCw className="animate-spin h-8 w-8 text-blue-600 mx-auto mb-4" />
-          <p className="text-gray-600">Loading tool inventory from database...</p>
-          <p className="text-sm text-gray-500 mt-2">Fetching from tool_inventory_enhanced table</p>
+          <RefreshCw className="mx-auto mb-4 h-8 w-8 animate-spin text-spuncast-navy" />
+          <p className="text-spuncast-slate/80">Loading tool inventory from database...</p>
+          <p className="text-sm text-spuncast-slate/70 mt-2">Fetching from tool_inventory_enhanced table</p>
         </div>
       </div>
     );
@@ -624,17 +624,17 @@ const ToolChangeForm = () => {
   const groupedFinishingTools = groupToolsByGeometry(availableTools.finishing);
 
   return (
-    <div className="max-w-6xl mx-auto p-6 bg-white">
+    <div className="max-w-6xl mx-auto rounded-3xl border border-white/60 bg-white p-8 shadow-brand">
       <div className="mb-6">
-        <h1 className="text-3xl font-bold text-gray-900 mb-2">Enhanced Tool Change Form</h1>
-        <p className="text-gray-600">Professional tool tracking with inventory integration</p>
-        <div className="flex items-center gap-4 mt-2 text-sm text-gray-500">
+        <h1 className="mb-2 text-3xl font-bold text-spuncast-navy">Enhanced Tool Change Form</h1>
+        <p className="text-spuncast-slate/80">Professional tool tracking with inventory integration</p>
+        <div className="mt-2 flex items-center gap-4 text-sm text-spuncast-slate/70">
           <span>📊 Tools Available: {availableTools.all.length}</span>
           <span>🔧 Roughing: {availableTools.roughing.length}</span>
           <span>✨ Finishing: {availableTools.finishing.length}</span>
         </div>
-        <div className="mt-3 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
-          <p className="text-sm text-yellow-800">
+        <div className="mt-3 p-3 bg-spuncast-sky border border-spuncast-red/20 rounded-lg">
+          <p className="text-sm text-spuncast-slate">
             <strong>Note:</strong> You can change either Rougher tools OR Finisher tools or both. 
             Fill out only the sections for tools you're actually changing.
           </p>
@@ -643,21 +643,21 @@ const ToolChangeForm = () => {
 
       {/* Cost Summary Panel */}
       {costSummary.totalCost > 0 && (
-        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
-          <h3 className="text-lg font-semibold text-blue-900 mb-2 flex items-center">
+        <div className="bg-spuncast-sky border border-spuncast-navy/10 rounded-lg p-4 mb-6">
+          <h3 className="text-lg font-semibold text-spuncast-navy mb-2 flex items-center">
             <DollarSign className="mr-2" size={20} />
             Tool Change Cost Summary
           </h3>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
             <div>
-              <span className="text-blue-700 font-medium">New Tool Cost:</span>
+              <span className="text-spuncast-navy font-medium">New Tool Cost:</span>
               <span className="ml-2 font-bold">${costSummary.newToolCost.toFixed(2)}</span>
             </div>
             <div>
-              <span className="text-blue-700 font-medium">Total Change Cost:</span>
+              <span className="text-spuncast-navy font-medium">Total Change Cost:</span>
               <span className="ml-2 font-bold text-lg">${costSummary.totalCost.toFixed(2)}</span>
             </div>
-            <div className="text-xs text-blue-600">
+            <div className="text-xs text-spuncast-navy">
               <Package2 className="inline mr-1" size={12} />
               Based on current inventory prices
             </div>
@@ -702,14 +702,14 @@ const ToolChangeForm = () => {
       )}
 
       {/* Basic Information Section */}
-      <div className="bg-blue-50 p-6 rounded-lg mb-6">
-        <h2 className="text-xl font-semibold text-blue-900 mb-4 flex items-center">
+      <div className="bg-spuncast-sky p-6 rounded-lg mb-6">
+        <h2 className="text-xl font-semibold text-spuncast-navy mb-4 flex items-center">
           <Clock className="mr-2" size={20} />
           Basic Information
         </h2>
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <label className="block text-sm font-medium text-spuncast-slate mb-1">
               Heat Number <span className="text-red-500">*</span>
             </label>
             <input
@@ -719,11 +719,11 @@ const ToolChangeForm = () => {
               onChange={handleInputChange}
               required
               placeholder="Enter heat number"
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full px-3 py-2 border border-spuncast-navy/10 rounded-md focus:outline-none focus:ring-2 focus:ring-spuncast-navy/20"
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <label className="block text-sm font-medium text-spuncast-slate mb-1">
               Date <span className="text-red-500">*</span>
             </label>
             <input
@@ -732,11 +732,11 @@ const ToolChangeForm = () => {
               value={formData.date}
               onChange={handleInputChange}
               required
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full px-3 py-2 border border-spuncast-navy/10 rounded-md focus:outline-none focus:ring-2 focus:ring-spuncast-navy/20"
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <label className="block text-sm font-medium text-spuncast-slate mb-1">
               Time <span className="text-red-500">*</span>
             </label>
             <input
@@ -745,11 +745,11 @@ const ToolChangeForm = () => {
               value={formData.time}
               onChange={handleInputChange}
               required
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full px-3 py-2 border border-spuncast-navy/10 rounded-md focus:outline-none focus:ring-2 focus:ring-spuncast-navy/20"
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <label className="block text-sm font-medium text-spuncast-slate mb-1">
               Shift <span className="text-red-500">*</span>
             </label>
             <select
@@ -757,7 +757,7 @@ const ToolChangeForm = () => {
               value={formData.shift}
               onChange={handleInputChange}
               required
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full px-3 py-2 border border-spuncast-navy/10 rounded-md focus:outline-none focus:ring-2 focus:ring-spuncast-navy/20"
             >
               <option value="">Select shift</option>
               <option value="1">1st Shift (6AM-2PM)</option>
@@ -769,14 +769,14 @@ const ToolChangeForm = () => {
       </div>
 
       {/* Operator Information Section */}
-      <div className="bg-purple-50 p-6 rounded-lg mb-6">
-        <h2 className="text-xl font-semibold text-purple-900 mb-4 flex items-center">
+      <div className="bg-spuncast-sky p-6 rounded-lg mb-6">
+        <h2 className="text-xl font-semibold text-spuncast-navy mb-4 flex items-center">
           <User className="mr-2" size={20} />
           Operator Information
         </h2>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <label className="block text-sm font-medium text-spuncast-slate mb-1">
               Operator <span className="text-red-500">*</span>
             </label>
             <select
@@ -784,7 +784,7 @@ const ToolChangeForm = () => {
               value={selectedOperatorValue}
               onChange={handleOperatorSelect}
               required
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500 disabled:bg-gray-100 disabled:text-gray-500"
+              className="w-full px-3 py-2 border border-spuncast-navy/10 rounded-md focus:outline-none focus:ring-2 focus:ring-spuncast-navy/20 disabled:bg-gray-100 disabled:text-spuncast-slate/70"
               disabled={!operators.length}
             >
               <option value="">Select operator</option>
@@ -796,7 +796,7 @@ const ToolChangeForm = () => {
             </select>
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <label className="block text-sm font-medium text-spuncast-slate mb-1">
               Work Center <span className="text-red-500">*</span>
             </label>
             <input
@@ -806,11 +806,11 @@ const ToolChangeForm = () => {
               onChange={handleInputChange}
               required
               placeholder="Enter work center"
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500"
+              className="w-full px-3 py-2 border border-spuncast-navy/10 rounded-md focus:outline-none focus:ring-2 focus:ring-spuncast-navy/20"
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <label className="block text-sm font-medium text-spuncast-slate mb-1">
               Equipment Number <span className="text-red-500">*</span>
             </label>
             <input
@@ -820,11 +820,11 @@ const ToolChangeForm = () => {
               onChange={handleInputChange}
               required
               placeholder="Enter equipment number"
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500"
+              className="w-full px-3 py-2 border border-spuncast-navy/10 rounded-md focus:outline-none focus:ring-2 focus:ring-spuncast-navy/20"
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <label className="block text-sm font-medium text-spuncast-slate mb-1">
               Operation <span className="text-red-500">*</span>
             </label>
             <select
@@ -832,7 +832,7 @@ const ToolChangeForm = () => {
               value={formData.operation}
               onChange={handleInputChange}
               required
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500"
+              className="w-full px-3 py-2 border border-spuncast-navy/10 rounded-md focus:outline-none focus:ring-2 focus:ring-spuncast-navy/20"
             >
               <option value="Bore">Bore</option>
               <option value="Turn">Turn</option>
@@ -841,7 +841,7 @@ const ToolChangeForm = () => {
             </select>
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <label className="block text-sm font-medium text-spuncast-slate mb-1">
               Part Number <span className="text-red-500">*</span>
             </label>
             <input
@@ -851,11 +851,11 @@ const ToolChangeForm = () => {
               onChange={handleInputChange}
               required
               placeholder="Enter part number"
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500"
+              className="w-full px-3 py-2 border border-spuncast-navy/10 rounded-md focus:outline-none focus:ring-2 focus:ring-spuncast-navy/20"
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <label className="block text-sm font-medium text-spuncast-slate mb-1">
               Job Number
             </label>
             <input
@@ -864,32 +864,32 @@ const ToolChangeForm = () => {
               value={formData.job_number}
               onChange={handleInputChange}
               placeholder="Enter job number (optional)"
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500"
+              className="w-full px-3 py-2 border border-spuncast-navy/10 rounded-md focus:outline-none focus:ring-2 focus:ring-spuncast-navy/20"
             />
           </div>
         </div>
       </div>
 
       {/* Enhanced Tool Change Information Section */}
-      <div className="bg-orange-50 p-6 rounded-lg mb-6">
-        <h2 className="text-xl font-semibold text-orange-900 mb-4 flex items-center">
+      <div className="bg-white p-6 rounded-lg mb-6">
+        <h2 className="text-xl font-semibold text-spuncast-red mb-4 flex items-center">
           <Package className="mr-2" size={20} />
           Tool Selection (Choose One or Both)
         </h2>
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
           {/* First Rougher Section */}
           <div className="space-y-4">
-            <h3 className="text-lg font-medium text-gray-800 border-b pb-2">First Rougher (Optional)</h3>
+            <h3 className="text-lg font-medium text-spuncast-navy border-b pb-2">First Rougher (Optional)</h3>
             
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-sm font-medium text-spuncast-slate mb-1">
                 Current First Rougher
               </label>
               <select
                 name="old_first_rougher"
                 value={formData.old_first_rougher}
                 onChange={handleInputChange}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500"
+                className="w-full px-3 py-2 border border-spuncast-navy/10 rounded-md focus:outline-none focus:ring-2 focus:ring-spuncast-red/30"
               >
                 <option value="">Select current roughing tool</option>
                 {Object.entries(groupedRoughingTools).map(([geometry, tools]) => (
@@ -906,7 +906,7 @@ const ToolChangeForm = () => {
                 ))}
               </select>
               {formData.first_rougher_action === 'New Insert' && formData.old_first_rougher && formData.new_first_rougher && (
-                <div className="mt-2 p-3 bg-blue-50 border border-blue-200 rounded text-sm">
+                <div className="mt-2 p-3 bg-spuncast-sky border border-spuncast-navy/10 rounded text-sm">
                   {(() => {
                     const tool = getToolDetails(formData.old_first_rougher);
                     return tool ? (
@@ -922,7 +922,7 @@ const ToolChangeForm = () => {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-sm font-medium text-spuncast-slate mb-1">
                 New First Rougher
               </label>
               <select
@@ -930,7 +930,7 @@ const ToolChangeForm = () => {
                 value={formData.new_first_rougher}
                 onChange={handleInputChange}
                 disabled={formData.first_rougher_action !== 'New Insert'}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500 disabled:bg-gray-100"
+                className="w-full px-3 py-2 border border-spuncast-navy/10 rounded-md focus:outline-none focus:ring-2 focus:ring-spuncast-red/30 disabled:bg-gray-100"
               >
                 <option value="">Select replacement roughing tool</option>
                 {Object.entries(groupedRoughingTools).map(([geometry, tools]) => (
@@ -965,14 +965,14 @@ const ToolChangeForm = () => {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-sm font-medium text-spuncast-slate mb-1">
                 Rougher Action
               </label>
               <select
                 name="first_rougher_action"
                 value={formData.first_rougher_action}
                 onChange={handleInputChange}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500"
+                className="w-full px-3 py-2 border border-spuncast-navy/10 rounded-md focus:outline-none focus:ring-2 focus:ring-spuncast-red/30"
               >
                 <option value="">Select action</option>
                 <option value="New Insert">New Insert (New Cost)</option>
@@ -981,7 +981,7 @@ const ToolChangeForm = () => {
             </div>
             {formData.first_rougher_action === 'New Insert' && formData.old_first_rougher && formData.new_first_rougher && (
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium text-spuncast-slate mb-1">
                   Rougher Change Reason <span className="text-red-500">*</span>
                 </label>
                 <select
@@ -989,7 +989,7 @@ const ToolChangeForm = () => {
                   value={formData.first_rougher_change_reason}
                   onChange={handleInputChange}
                   required
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500"
+                  className="w-full px-3 py-2 border border-spuncast-navy/10 rounded-md focus:outline-none focus:ring-2 focus:ring-spuncast-red/30"
                 >
                   <option value="">Select reason</option>
                   <option value="Normal wear">Normal wear</option>
@@ -1005,17 +1005,17 @@ const ToolChangeForm = () => {
 
           {/* Finish Tool Section */}
           <div className="space-y-4">
-            <h3 className="text-lg font-medium text-gray-800 border-b pb-2">Finish Tool (Optional)</h3>
+            <h3 className="text-lg font-medium text-spuncast-navy border-b pb-2">Finish Tool (Optional)</h3>
             
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-sm font-medium text-spuncast-slate mb-1">
                 Current Finish Tool
               </label>
               <select
                 name="old_finish_tool"
                 value={formData.old_finish_tool}
                 onChange={handleInputChange}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500"
+                className="w-full px-3 py-2 border border-spuncast-navy/10 rounded-md focus:outline-none focus:ring-2 focus:ring-spuncast-red/30"
               >
                 <option value="">Select current finishing tool</option>
                 {Object.entries(groupedFinishingTools).map(([geometry, tools]) => (
@@ -1032,7 +1032,7 @@ const ToolChangeForm = () => {
                 ))}
               </select>
               {formData.finish_tool_action === 'New Insert' && formData.old_finish_tool && formData.new_finish_tool && (
-                <div className="mt-2 p-3 bg-blue-50 border border-blue-200 rounded text-sm">
+                <div className="mt-2 p-3 bg-spuncast-sky border border-spuncast-navy/10 rounded text-sm">
                   {(() => {
                     const tool = getToolDetails(formData.old_finish_tool);
                     return tool ? (
@@ -1048,7 +1048,7 @@ const ToolChangeForm = () => {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-sm font-medium text-spuncast-slate mb-1">
                 New Finish Tool
               </label>
               <select
@@ -1056,7 +1056,7 @@ const ToolChangeForm = () => {
                 value={formData.new_finish_tool}
                 onChange={handleInputChange}
                 disabled={formData.finish_tool_action !== 'New Insert'}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500 disabled:bg-gray-100"
+                className="w-full px-3 py-2 border border-spuncast-navy/10 rounded-md focus:outline-none focus:ring-2 focus:ring-spuncast-red/30 disabled:bg-gray-100"
               >
                 <option value="">Select replacement finishing tool</option>
                 {Object.entries(groupedFinishingTools).map(([geometry, tools]) => (
@@ -1091,14 +1091,14 @@ const ToolChangeForm = () => {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-sm font-medium text-spuncast-slate mb-1">
                 Finish Action
               </label>
               <select
                 name="finish_tool_action"
                 value={formData.finish_tool_action}
                 onChange={handleInputChange}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500"
+                className="w-full px-3 py-2 border border-spuncast-navy/10 rounded-md focus:outline-none focus:ring-2 focus:ring-spuncast-red/30"
               >
                 <option value="">Select action</option>
                 <option value="New Insert">New Insert (New Cost)</option>
@@ -1107,7 +1107,7 @@ const ToolChangeForm = () => {
             </div>
             {formData.finish_tool_action === 'New Insert' && formData.old_finish_tool && formData.new_finish_tool && (
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium text-spuncast-slate mb-1">
                   Finish Change Reason <span className="text-red-500">*</span>
                 </label>
                 <select
@@ -1115,7 +1115,7 @@ const ToolChangeForm = () => {
                   value={formData.finish_tool_change_reason}
                   onChange={handleInputChange}
                   required
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500"
+                  className="w-full px-3 py-2 border border-spuncast-navy/10 rounded-md focus:outline-none focus:ring-2 focus:ring-spuncast-red/30"
                 >
                   <option value="">Select reason</option>
                   <option value="Normal wear">Normal wear</option>
@@ -1132,21 +1132,21 @@ const ToolChangeForm = () => {
       </div>
 
       {/* Material Information Section */}
-      <div className="bg-yellow-50 p-6 rounded-lg mb-6">
-        <h2 className="text-xl font-semibold text-yellow-900 mb-4 flex items-center">
+      <div className="bg-spuncast-sky p-6 rounded-lg mb-6">
+        <h2 className="text-xl font-semibold text-spuncast-navy mb-4 flex items-center">
           <TrendingUp className="mr-2" size={20} />
           Material & Process Information
         </h2>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <label className="block text-sm font-medium text-spuncast-slate mb-1">
               Material Appearance
             </label>
             <select
               name="material_appearance"
               value={formData.material_appearance}
               onChange={handleInputChange}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-yellow-500"
+              className="w-full px-3 py-2 border border-spuncast-navy/10 rounded-md focus:outline-none focus:ring-2 focus:ring-spuncast-red/30"
             >
               <option value="Normal">Normal</option>
               <option value="Hard spots">Hard spots</option>
@@ -1157,7 +1157,7 @@ const ToolChangeForm = () => {
           </div>
         </div>
         <div className="mt-4">
-          <label className="block text-sm font-medium text-gray-700 mb-1">
+          <label className="block text-sm font-medium text-spuncast-slate mb-1">
             Additional Notes
           </label>
           <textarea
@@ -1166,7 +1166,7 @@ const ToolChangeForm = () => {
             onChange={handleInputChange}
             rows={3}
             placeholder="Enter any additional observations or notes..."
-            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-yellow-500"
+            className="w-full px-3 py-2 border border-spuncast-navy/10 rounded-md focus:outline-none focus:ring-2 focus:ring-spuncast-red/30"
           />
         </div>
       </div>
@@ -1176,7 +1176,7 @@ const ToolChangeForm = () => {
         <button
           onClick={handleSubmit}
           disabled={isSubmitting}
-          className="flex items-center px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-200"
+          className="flex items-center rounded-full bg-spuncast-navy px-6 py-3 text-white shadow-brand transition-colors duration-200 hover:bg-spuncast-navyDark disabled:cursor-not-allowed disabled:opacity-50"
         >
           {isSubmitting ? (
             <>
