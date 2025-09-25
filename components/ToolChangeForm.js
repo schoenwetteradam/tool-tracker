@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useRouter } from 'next/router';
 import {
   Clock,
   User,
@@ -80,6 +81,7 @@ const FALLBACK_OPERATORS = [
 ].filter(Boolean);
 
 const ToolChangeForm = () => {
+  const router = useRouter();
   const getCurrentDateTime = () => {
     const now = new Date();
     return {
@@ -139,6 +141,27 @@ const ToolChangeForm = () => {
   useEffect(() => {
     fetchToolInventory();
   }, []);
+
+  useEffect(() => {
+    if (!router.isReady) {
+      return;
+    }
+
+    const { equipment, workcenter } = router.query || {};
+
+    const equipmentValue = Array.isArray(equipment) ? equipment[0] : equipment;
+    const workcenterValue = Array.isArray(workcenter) ? workcenter[0] : workcenter;
+
+    if (!equipmentValue && !workcenterValue) {
+      return;
+    }
+
+    setFormData((prev) => ({
+      ...prev,
+      equipment_number: equipmentValue?.trim() || prev.equipment_number,
+      work_center: workcenterValue?.trim() || prev.work_center,
+    }));
+  }, [router.isReady, router.query]);
 
   useEffect(() => {
     const loadOperators = async () => {
