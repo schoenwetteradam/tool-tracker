@@ -130,6 +130,10 @@ const ToolChangeForm = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitStatus, setSubmitStatus] = useState(null);
   const [toolsLoading, setToolsLoading] = useState(true);
+  const [defaultToolSelections, setDefaultToolSelections] = useState({
+    rougherId: '',
+    finisherId: ''
+  });
   const [costSummary, setCostSummary] = useState({
     oldToolCost: 0,
     newToolCost: 0,
@@ -225,27 +229,43 @@ const ToolChangeForm = () => {
       // Simulated tool inventory data
       const fallbackData = [
         {
-          id: 1, material_id: '11-00529', insert_geometry: 'SNMG 4235', insert_grade: '', 
+          id: 2, material_id: '11-00529', insert_geometry: 'SNMG 4335', insert_grade: '',
           insert_type: 'ROUGHING', quantity_on_hand: 100, min_quantity: 25, unit_cost: 16.35,
           supplier_name: 'Sandvik'
         },
         {
-          id: 2, material_id: '11-00529', insert_geometry: 'SNMG 4335', insert_grade: '', 
-          insert_type: 'ROUGHING', quantity_on_hand: 100, min_quantity: 25, unit_cost: 16.35,
-          supplier_name: 'Sandvik'
-        },
-        {
-          id: 3, material_id: '11-00025', insert_geometry: 'SNMG 2220', insert_grade: '', 
+          id: 3, material_id: '11-00025', insert_geometry: 'SNMG 2220', insert_grade: '',
           insert_type: 'FINISHING', quantity_on_hand: 75, min_quantity: 20, unit_cost: 16.71,
           supplier_name: 'Kennametal'
         }
       ];
 
+      const roughingTools = fallbackData.filter(
+        (t) => t.insert_type === 'ROUGHING' && t.insert_geometry?.includes('4335')
+      );
+      const finishingTools = fallbackData.filter(t => t.insert_type === 'FINISHING');
+
+      const defaultRougherId = roughingTools[0]?.id || '';
+      const defaultFinisherId = finishingTools[0]?.id || '';
+
       setAvailableTools({
-        roughing: fallbackData.filter(t => t.insert_type === 'ROUGHING'),
-        finishing: fallbackData.filter(t => t.insert_type === 'FINISHING'),
-        all: fallbackData
+        roughing: roughingTools,
+        finishing: finishingTools,
+        all: [...roughingTools, ...finishingTools]
       });
+
+      setDefaultToolSelections({
+        rougherId: defaultRougherId,
+        finisherId: defaultFinisherId
+      });
+
+      setFormData(prev => ({
+        ...prev,
+        old_first_rougher: defaultRougherId || prev.old_first_rougher,
+        new_first_rougher: defaultRougherId || prev.new_first_rougher,
+        old_finish_tool: defaultFinisherId || prev.old_finish_tool,
+        new_finish_tool: defaultFinisherId || prev.new_finish_tool,
+      }));
     } finally {
       setToolsLoading(false);
     }
@@ -562,11 +582,11 @@ const ToolChangeForm = () => {
           job_number: '',
           heat_number: '',
           material_appearance: 'Normal',
-          old_first_rougher: '',
-          new_first_rougher: '',
+          old_first_rougher: defaultToolSelections.rougherId,
+          new_first_rougher: defaultToolSelections.rougherId,
           first_rougher_action: '',
-          old_finish_tool: '',
-          new_finish_tool: '',
+          old_finish_tool: defaultToolSelections.finisherId,
+          new_finish_tool: defaultToolSelections.finisherId,
           finish_tool_action: '',
           first_rougher_change_reason: '',
           finish_tool_change_reason: '',
