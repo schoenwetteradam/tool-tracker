@@ -261,10 +261,8 @@ const ToolChangeForm = () => {
 
       setFormData(prev => ({
         ...prev,
-        old_first_rougher: defaultRougherId || prev.old_first_rougher,
-        new_first_rougher: defaultRougherId || prev.new_first_rougher,
-        old_finish_tool: defaultFinisherId || prev.old_finish_tool,
-        new_finish_tool: defaultFinisherId || prev.new_finish_tool,
+        old_first_rougher: prev.old_first_rougher || defaultRougherId,
+        old_finish_tool: prev.old_finish_tool || defaultFinisherId,
       }));
     } finally {
       setToolsLoading(false);
@@ -448,8 +446,16 @@ const ToolChangeForm = () => {
     let validationErrors = [];
 
     // Check if at least one tool type is being changed
-    const isRougherChange = formData.old_first_rougher || formData.new_first_rougher || formData.first_rougher_action;
-    const isFinisherChange = formData.old_finish_tool || formData.new_finish_tool || formData.finish_tool_action;
+    const isRougherChange = Boolean(
+      formData.first_rougher_action ||
+      formData.first_rougher_change_reason ||
+      formData.new_first_rougher
+    );
+    const isFinisherChange = Boolean(
+      formData.finish_tool_action ||
+      formData.finish_tool_change_reason ||
+      formData.new_finish_tool
+    );
 
     if (!isRougherChange && !isFinisherChange) {
       validationErrors.push('Must specify changes for at least one tool type (Rougher OR Finisher)');
@@ -583,10 +589,10 @@ const ToolChangeForm = () => {
           heat_number: '',
           material_appearance: 'Normal',
           old_first_rougher: defaultToolSelections.rougherId,
-          new_first_rougher: defaultToolSelections.rougherId,
+          new_first_rougher: '',
           first_rougher_action: '',
           old_finish_tool: defaultToolSelections.finisherId,
-          new_finish_tool: defaultToolSelections.finisherId,
+          new_finish_tool: '',
           finish_tool_action: '',
           first_rougher_change_reason: '',
           finish_tool_change_reason: '',
