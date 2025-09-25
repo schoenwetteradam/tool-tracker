@@ -1,37 +1,115 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import Head from 'next/head'
-
-const toleranceConfig = {
-  barrelDiameter: { target: 11.569, tolerance: 0.02 },
-  flangeDiameter: { target: 12.87, tolerance: 0.02 },
-  overallLength: { target: 59.519, tolerance: 0.02 },
-  lengthToFlange: { target: 54.622, tolerance: 0.02 }
-}
 
 const statusStyles = {
   NONE: {
-    input: 'bg-white border-indigo-100',
+    input: 'border-amber-200 bg-white',
     badge: 'text-gray-500',
     indicator: 'bg-gray-300',
     label: 'Awaiting Measurement'
   },
   PASS: {
-    input: 'bg-green-50 border-green-400 focus:border-green-500',
-    badge: 'text-green-600',
-    indicator: 'bg-green-500',
+    input: 'border-emerald-400 bg-emerald-50',
+    badge: 'text-emerald-600',
+    indicator: 'bg-emerald-500',
     label: 'PASS'
   },
   MARGINAL: {
-    input: 'bg-amber-50 border-amber-400 focus:border-amber-500',
+    input: 'border-amber-400 bg-amber-50',
     badge: 'text-amber-600',
     indicator: 'bg-amber-500',
     label: 'MARGINAL'
   },
   FAIL: {
-    input: 'bg-red-50 border-red-400 focus:border-red-500',
-    badge: 'text-red-600',
-    indicator: 'bg-red-500',
+    input: 'border-rose-400 bg-rose-50',
+    badge: 'text-rose-600',
+    indicator: 'bg-rose-500',
     label: 'FAIL'
+  }
+}
+
+const cylinderFields = ['barrelDiameter', 'flangeDiameter', 'overallLength', 'lengthToFlange']
+
+const productSpecs = {
+  'CAT536-6765': {
+    type: 'cylinder',
+    productFamily: '536_SERIES',
+    info: 'Highest priority cylinder. Use measurement sheet 41A2360.',
+    barrelTarget: 11.569,
+    barrelTol: 0.02,
+    flangeTarget: 12.87,
+    flangeTol: 0.02,
+    lengthTarget: 59.519,
+    lengthTol: 0.02,
+    flangeToTarget: 54.622,
+    flangeToTol: 0.02
+  },
+  'CAT536-6763': {
+    type: 'cylinder',
+    productFamily: '536_SERIES',
+    info: 'High priority cylinder. Similar to 6765 procedures.',
+    barrelTarget: 11.5,
+    barrelTol: 0.02,
+    flangeTarget: 12.8,
+    flangeTol: 0.02,
+    lengthTarget: 58,
+    lengthTol: 0.02,
+    flangeToTarget: 53,
+    flangeToTol: 0.02
+  },
+  'CAT536-6764': {
+    type: 'cylinder',
+    productFamily: '536_SERIES',
+    info: 'High priority cylinder. Part of 536 family.',
+    barrelTarget: 11.4,
+    barrelTol: 0.02,
+    flangeTarget: 12.7,
+    flangeTol: 0.02,
+    lengthTarget: 57.5,
+    lengthTol: 0.02,
+    flangeToTarget: 52.5,
+    flangeToTol: 0.02
+  },
+  'CAT150-3014': {
+    type: 'large_casting',
+    productFamily: 'LARGE_SERIES',
+    info: 'Large casting. Use standard measurement procedures for large components.'
+  },
+  'CAT150-3011': {
+    type: 'large_casting',
+    productFamily: 'LARGE_SERIES',
+    info: 'Large casting ~1450 lbs. High scrap cost - verify all dimensions carefully.',
+    lengthTarget: 60,
+    lengthTol: 0.04
+  },
+  'CAT4T-6051': {
+    type: 'heavy_duty',
+    productFamily: '4T_SERIES',
+    info: 'Heavy duty casting. Multiple OD measurements required. Focus on machining surfaces.',
+    lengthTarget: 45,
+    lengthTol: 0.03
+  },
+  'CAT4T-5937': {
+    type: 'heavy_duty',
+    productFamily: '4T_SERIES',
+    info: 'Heavy duty casting. Check structural integrity and multiple OD locations.',
+    lengthTarget: 42,
+    lengthTol: 0.03
+  },
+  'CAT4T-4774': {
+    type: 'heavy_duty',
+    productFamily: '4T_SERIES',
+    info: 'Heavy duty casting. Medium priority component.'
+  },
+  'CAT121-2077': {
+    type: 'large_assembly',
+    productFamily: 'LARGE_SERIES',
+    info: 'Large assembly. Follow standard measurement procedures.'
+  },
+  'CAT522-7552': {
+    type: 'large_assembly',
+    productFamily: 'LARGE_SERIES',
+    info: 'Large assembly. Ensure all dimensions are recorded accurately.'
   }
 }
 
@@ -45,31 +123,22 @@ const initialFormData = {
   flangeDiameter: '',
   overallLength: '',
   lengthToFlange: '',
-  barrelMethod: 'PI_TAPE',
-  flangeMethod: 'PI_TAPE',
-  lengthMethod: 'TAPE_MEASURE',
-  lengthToFlangeMethod: 'TAPE_MEASURE',
-  odMeasurement1: '',
-  odMeasurement2: '',
-  idMeasurement1: '',
-  idMeasurement2: '',
-  lengthMeasurement1: '',
-  lengthMeasurement2: '',
-  moldTemperature: '',
-  pourTemperature: '',
+  od1: '',
+  od2: '',
+  od3: '',
+  id1: '',
+  id2: '',
+  length1: '',
   materialAppearance: '',
-  materialRiskScore: '',
   dimensionalStatus: 'PASS',
   heatTreatApproved: 'true',
   surfaceCondition: '',
-  requiresRework: 'false',
   notes: ''
 }
 
-const initialToleranceStatuses = Object.keys(toleranceConfig).reduce(
-  (acc, key) => ({ ...acc, [key]: 'NONE' }),
-  {}
-)
+const initialToleranceStatuses = cylinderFields.reduce((accumulator, key) => {
+  return { ...accumulator, [key]: 'NONE' }
+}, {})
 
 function evaluateTolerance(value, { target, tolerance }) {
   const numericValue = parseFloat(value)
@@ -98,59 +167,69 @@ export default function BlastExitMeasurement() {
   const [successMessage, setSuccessMessage] = useState('')
   const [errorMessage, setErrorMessage] = useState('')
 
-  const isCat536 = formData.productNumber === 'CAT536-6765'
-  const isGenericProduct =
-    formData.productNumber === 'CAT150-3014' || formData.productNumber === 'OTHER'
+  const selectedSpec = formData.productNumber ? productSpecs[formData.productNumber] : null
+  const isCylinder = selectedSpec?.type === 'cylinder'
+  const showGenericMeasurements = Boolean(formData.productNumber && !isCylinder)
 
-  const measurementRows = useMemo(
-    () => [
+  const toleranceMap = useMemo(() => {
+    if (!isCylinder || !selectedSpec) {
+      return {}
+    }
+
+    return {
+      barrelDiameter: { target: selectedSpec.barrelTarget, tolerance: selectedSpec.barrelTol },
+      flangeDiameter: { target: selectedSpec.flangeTarget, tolerance: selectedSpec.flangeTol },
+      overallLength: { target: selectedSpec.lengthTarget, tolerance: selectedSpec.lengthTol },
+      lengthToFlange: { target: selectedSpec.flangeToTarget, tolerance: selectedSpec.flangeToTol }
+    }
+  }, [isCylinder, selectedSpec])
+
+  const cylinderMeasurements = useMemo(() => {
+    if (!isCylinder || !selectedSpec) {
+      return []
+    }
+
+    return [
       {
-        name: 'barrelDiameter',
-        label: 'Barrel Diameter (11.5490 - 11.5890)',
-        target: toleranceConfig.barrelDiameter.target,
-        tolerance: toleranceConfig.barrelDiameter.tolerance,
-        methodName: 'barrelMethod',
-        methodOptions: [
-          { label: 'Pi Tape', value: 'PI_TAPE' },
-          { label: 'Caliper', value: 'CALIPER' }
-        ]
+        key: 'barrelDiameter',
+        label: 'Barrel Diameter',
+        target: selectedSpec.barrelTarget,
+        tolerance: selectedSpec.barrelTol
       },
       {
-        name: 'flangeDiameter',
-        label: 'Flange Diameter (12.8500 - 12.8900)',
-        target: toleranceConfig.flangeDiameter.target,
-        tolerance: toleranceConfig.flangeDiameter.tolerance,
-        methodName: 'flangeMethod',
-        methodOptions: [
-          { label: 'Pi Tape', value: 'PI_TAPE' },
-          { label: 'Caliper', value: 'CALIPER' }
-        ]
+        key: 'flangeDiameter',
+        label: 'Flange Diameter',
+        target: selectedSpec.flangeTarget,
+        tolerance: selectedSpec.flangeTol
       },
       {
-        name: 'overallLength',
-        label: 'Overall Length (59.4990 - 59.5390)',
-        target: toleranceConfig.overallLength.target,
-        tolerance: toleranceConfig.overallLength.tolerance,
-        methodName: 'lengthMethod',
-        methodOptions: [
-          { label: 'Tape Measure', value: 'TAPE_MEASURE' },
-          { label: 'Large Caliper', value: 'CALIPER' }
-        ]
+        key: 'overallLength',
+        label: 'Overall Length',
+        target: selectedSpec.lengthTarget,
+        tolerance: selectedSpec.lengthTol
       },
       {
-        name: 'lengthToFlange',
-        label: 'Length to Flange (54.6020 - 54.6420)',
-        target: toleranceConfig.lengthToFlange.target,
-        tolerance: toleranceConfig.lengthToFlange.tolerance,
-        methodName: 'lengthToFlangeMethod',
-        methodOptions: [
-          { label: 'Tape Measure', value: 'TAPE_MEASURE' },
-          { label: 'Caliper', value: 'CALIPER' }
-        ]
+        key: 'lengthToFlange',
+        label: 'Length to Flange',
+        target: selectedSpec.flangeToTarget,
+        tolerance: selectedSpec.flangeToTol
       }
-    ],
-    []
-  )
+    ]
+  }, [isCylinder, selectedSpec])
+
+  useEffect(() => {
+    setToleranceStatuses(() => {
+      const updated = { ...initialToleranceStatuses }
+
+      cylinderFields.forEach((field) => {
+        const config = toleranceMap[field]
+        const value = formData[field]
+        updated[field] = config ? evaluateTolerance(value, config) : 'NONE'
+      })
+
+      return updated
+    })
+  }, [formData.barrelDiameter, formData.flangeDiameter, formData.overallLength, formData.lengthToFlange, toleranceMap])
 
   const handleFieldChange = (event) => {
     const { name, value } = event.target
@@ -159,21 +238,14 @@ export default function BlastExitMeasurement() {
       ...previous,
       [name]: value
     }))
-
-    if (toleranceConfig[name]) {
-      setToleranceStatuses((previous) => ({
-        ...previous,
-        [name]: evaluateTolerance(value, toleranceConfig[name])
-      }))
-    }
   }
 
-  const resetForm = () => {
+  const resetFormFields = () => {
     setFormData({ ...initialFormData })
     setToleranceStatuses({ ...initialToleranceStatuses })
   }
 
-  const autoFillDefaults = () => {
+  const autoFill536 = () => {
     const now = new Date()
     const generatedHeat = `H${now.getTime().toString().slice(-6)}`
 
@@ -187,17 +259,48 @@ export default function BlastExitMeasurement() {
       flangeDiameter: '12.8700',
       overallLength: '59.5190',
       lengthToFlange: '54.6220',
+      materialAppearance: 'GOOD',
       dimensionalStatus: 'PASS',
-      heatTreatApproved: 'true',
-      requiresRework: 'false'
+      heatTreatApproved: 'true'
     }))
+  }
 
-    setToleranceStatuses((previous) => ({
+  const autoFill4T = () => {
+    const now = new Date()
+    const generatedHeat = `H${now.getTime().toString().slice(-6)}`
+
+    setFormData((previous) => ({
       ...previous,
-      barrelDiameter: 'PASS',
-      flangeDiameter: 'PASS',
-      overallLength: 'PASS',
-      lengthToFlange: 'PASS'
+      productNumber: 'CAT4T-6051',
+      heatNumber: generatedHeat,
+      operator: 'Test Operator',
+      shift: '1',
+      od1: '12.5000',
+      od2: '8.7500',
+      od3: '6.2500',
+      length1: '45.0000',
+      materialAppearance: 'GOOD',
+      dimensionalStatus: 'PASS',
+      heatTreatApproved: 'true'
+    }))
+  }
+
+  const autoFillLarge = () => {
+    const now = new Date()
+    const generatedHeat = `H${now.getTime().toString().slice(-6)}`
+
+    setFormData((previous) => ({
+      ...previous,
+      productNumber: 'CAT150-3011',
+      heatNumber: generatedHeat,
+      operator: 'Test Operator',
+      shift: '1',
+      od1: '24.0000',
+      od2: '18.5000',
+      length1: '60.0000',
+      materialAppearance: 'GOOD',
+      dimensionalStatus: 'PASS',
+      heatTreatApproved: 'true'
     }))
   }
 
@@ -208,42 +311,41 @@ export default function BlastExitMeasurement() {
     setSuccessMessage('')
     setErrorMessage('')
 
+    const spec = selectedSpec
+
     const measurementData = {
       heat_number: formData.heatNumber,
       tracking_number: formData.trackingNumber ? parseInt(formData.trackingNumber, 10) : null,
       product_number: formData.productNumber || null,
+      product_family: spec?.productFamily || 'OTHER',
       measurement_date: new Date().toISOString().split('T')[0],
       measurement_time: new Date().toTimeString().split(' ')[0].slice(0, 5),
       operator: formData.operator,
       shift: formData.shift ? parseInt(formData.shift, 10) : null,
       barrel_diameter_actual: formData.barrelDiameter ? parseFloat(formData.barrelDiameter) : null,
-      barrel_diameter_target: toleranceConfig.barrelDiameter.target,
-      barrel_diameter_tolerance: toleranceConfig.barrelDiameter.tolerance,
+      barrel_diameter_target: spec?.barrelTarget ?? null,
+      barrel_diameter_tolerance: spec?.barrelTol ?? null,
       flange_diameter_actual: formData.flangeDiameter ? parseFloat(formData.flangeDiameter) : null,
-      flange_diameter_target: toleranceConfig.flangeDiameter.target,
-      flange_diameter_tolerance: toleranceConfig.flangeDiameter.tolerance,
+      flange_diameter_target: spec?.flangeTarget ?? null,
+      flange_diameter_tolerance: spec?.flangeTol ?? null,
       overall_length_actual: formData.overallLength ? parseFloat(formData.overallLength) : null,
-      overall_length_target: toleranceConfig.overallLength.target,
-      overall_length_tolerance: toleranceConfig.overallLength.tolerance,
+      overall_length_target: spec?.lengthTarget ?? null,
+      overall_length_tolerance: spec?.lengthTol ?? null,
       length_to_flange_actual: formData.lengthToFlange ? parseFloat(formData.lengthToFlange) : null,
-      length_to_flange_target: toleranceConfig.lengthToFlange.target,
-      length_to_flange_tolerance: toleranceConfig.lengthToFlange.tolerance,
-      od_measurement_1: formData.odMeasurement1 ? parseFloat(formData.odMeasurement1) : null,
-      od_measurement_2: formData.odMeasurement2 ? parseFloat(formData.odMeasurement2) : null,
-      id_measurement_1: formData.idMeasurement1 ? parseFloat(formData.idMeasurement1) : null,
-      id_measurement_2: formData.idMeasurement2 ? parseFloat(formData.idMeasurement2) : null,
-      length_measurement_1: formData.lengthMeasurement1 ? parseFloat(formData.lengthMeasurement1) : null,
-      length_measurement_2: formData.lengthMeasurement2 ? parseFloat(formData.lengthMeasurement2) : null,
-      mold_temperature: formData.moldTemperature ? parseFloat(formData.moldTemperature) : null,
-      pour_temperature: formData.pourTemperature ? parseFloat(formData.pourTemperature) : null,
+      length_to_flange_target: spec?.flangeToTarget ?? null,
+      length_to_flange_tolerance: spec?.flangeToTol ?? null,
+      od_measurement_1: formData.od1 ? parseFloat(formData.od1) : null,
+      od_measurement_2: formData.od2 ? parseFloat(formData.od2) : null,
+      od_measurement_3: formData.od3 ? parseFloat(formData.od3) : null,
+      id_measurement_1: formData.id1 ? parseFloat(formData.id1) : null,
+      id_measurement_2: formData.id2 ? parseFloat(formData.id2) : null,
+      length_measurement_1: formData.length1 ? parseFloat(formData.length1) : null,
       material_appearance: formData.materialAppearance || null,
-      material_risk_score: formData.materialRiskScore ? parseInt(formData.materialRiskScore, 10) : null,
       dimensional_status: formData.dimensionalStatus,
       heat_treat_approved: formData.heatTreatApproved === 'true',
       surface_condition: formData.surfaceCondition || null,
-      requires_rework: formData.requiresRework === 'true',
       notes: formData.notes || null,
-      measurement_method: 'MANUAL_ENTRY'
+      measurement_method: 'CAT_BLAST_EXIT_APP_V1'
     }
 
     try {
@@ -262,8 +364,14 @@ export default function BlastExitMeasurement() {
         throw new Error(message)
       }
 
-      setSuccessMessage('Measurement recorded successfully!')
-      resetForm()
+      setSuccessMessage(
+        `✅ ${formData.productNumber || 'Measurement'} recorded! Heat: ${measurementData.heat_number} | Status: ${measurementData.dimensional_status}`
+      )
+
+      setTimeout(() => {
+        resetFormFields()
+        setSuccessMessage('')
+      }, 3000)
     } catch (error) {
       setErrorMessage(error.message || 'Error submitting measurement. Please try again.')
     } finally {
@@ -272,83 +380,101 @@ export default function BlastExitMeasurement() {
   }
 
   const renderStatusBadge = (statusKey) => {
-    const currentStatus = statusStyles[statusKey] ? statusKey : 'NONE'
-    const styles = statusStyles[currentStatus]
-
-    if (currentStatus === 'NONE') {
+    if (!statusKey || statusKey === 'NONE') {
       return null
     }
 
+    const styles = statusStyles[statusKey] || statusStyles.NONE
+
     return (
       <div className={`flex items-center space-x-2 text-sm font-semibold ${styles.badge}`}>
-        <span className={`w-3 h-3 rounded-full ${styles.indicator}`} />
+        <span className={`h-3 w-3 rounded-full ${styles.indicator}`} />
         <span>{styles.label}</span>
       </div>
     )
   }
 
-  const openQRPlaceholder = () => {
-    window.alert('QR Scanner will be implemented in Phase 2. For now, use manual entry.')
-  }
+  const productDetailsMessage = useMemo(() => {
+    if (selectedSpec?.info) {
+      return selectedSpec.info
+    }
 
-  const loadLastHeatPlaceholder = () => {
-    window.alert('Loading last heat data... (Feature coming soon)')
-  }
+    if (formData.productNumber === 'OTHER') {
+      return 'Manual entry for other CAT products. Use standard measurement procedures.'
+    }
+
+    return ''
+  }, [formData.productNumber, selectedSpec])
 
   return (
     <>
       <Head>
-        <title>📏 Blast Exit Measurement</title>
+        <title>📏 CAT Measurement System</title>
       </Head>
-      <div className="min-h-screen bg-gradient-to-br from-indigo-500 via-purple-500 to-purple-700 py-10 px-4">
-        <div className="max-w-5xl mx-auto">
-          <div className="bg-white/95 backdrop-blur-sm shadow-2xl rounded-3xl px-6 py-8 sm:px-10 sm:py-12">
-            <header className="text-center mb-10">
-              <h1 className="text-3xl sm:text-4xl font-bold text-indigo-600 mb-3">📏 Blast Exit Measurement</h1>
-              <p className="text-gray-600 text-lg">Dimensional Control System - Phase 1</p>
+      <div className="min-h-screen bg-gradient-to-br from-amber-300 via-orange-400 to-orange-500 px-4 py-10">
+        <div className="mx-auto max-w-4xl">
+          <div className="rounded-3xl bg-white px-6 py-8 shadow-2xl sm:px-10 sm:py-10">
+            <header className="mb-8 text-center text-gray-800">
+              <h1 className="text-3xl font-bold text-amber-500 sm:text-4xl">🏗️ CAT Measurement System</h1>
+              <p className="mt-2 text-lg">Blast Exit Dimensional Control - Phase 1</p>
+              <div className="mt-5 flex flex-wrap justify-center gap-3 text-sm font-semibold text-white">
+                <span className="rounded-full bg-gradient-to-r from-amber-400 to-orange-500 px-4 py-2">Starting with Top CAT Products</span>
+                <span className="rounded-full bg-gradient-to-r from-amber-400 to-orange-500 px-4 py-2">536 &amp; 4T Series Priority</span>
+                <span className="rounded-full bg-gradient-to-r from-amber-400 to-orange-500 px-4 py-2">Ready for Production</span>
+              </div>
             </header>
 
             {successMessage && (
-              <div className="mb-6 rounded-2xl border border-emerald-200 bg-emerald-50 px-5 py-4 text-emerald-700 font-semibold text-center">
-                ✅ {successMessage}
+              <div className="mb-6 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-center text-emerald-700 font-semibold">
+                {successMessage}
               </div>
             )}
 
             {errorMessage && (
-              <div className="mb-6 rounded-2xl border border-red-200 bg-red-50 px-5 py-4 text-red-700 font-semibold text-center">
+              <div className="mb-6 rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-center text-rose-700 font-semibold">
                 ❌ {errorMessage}
               </div>
             )}
 
             <form onSubmit={handleSubmit} className="space-y-8">
-              <section className="border-2 border-indigo-200 bg-indigo-50/60 rounded-2xl p-5 sm:p-6">
-                <div className="grid sm:grid-cols-[1fr_auto] gap-4 sm:gap-6 items-end">
-                  <div>
-                    <label className="block text-sm font-semibold text-gray-700 mb-2" htmlFor="productNumber">
-                      Product Number <span className="text-red-500">*</span>
-                    </label>
-                    <select
-                      id="productNumber"
-                      name="productNumber"
-                      required
-                      value={formData.productNumber}
-                      onChange={handleFieldChange}
-                      className="w-full rounded-xl border-2 border-indigo-200 bg-white px-4 py-3 text-base font-semibold text-gray-800 focus:outline-none focus:ring-4 focus:ring-indigo-100"
-                    >
-                      <option value="">Select Product</option>
-                      <option value="CAT536-6765">CAT536-6765 (Cylinder Casting)</option>
-                      <option value="CAT150-3014">CAT150-3014 (Standard Casting)</option>
-                      <option value="OTHER">Other Product</option>
-                    </select>
+              <section className="rounded-2xl border-2 border-amber-200 bg-amber-50/70 p-5">
+                <label className="block text-sm font-semibold text-gray-700" htmlFor="productNumber">
+                  CAT Product Number <span className="text-rose-500">*</span>
+                </label>
+                <select
+                  id="productNumber"
+                  name="productNumber"
+                  required
+                  value={formData.productNumber}
+                  onChange={handleFieldChange}
+                  className="mt-2 w-full rounded-xl border-2 border-amber-200 bg-white px-4 py-3 font-semibold text-gray-800 focus:outline-none focus:ring-4 focus:ring-amber-100"
+                >
+                  <option value="">Select CAT Product</option>
+                  <option value="CAT536-6765">CAT536-6765 (Cylinder - HIGHEST Priority)</option>
+                  <option value="CAT536-6763">CAT536-6763 (Cylinder - HIGH Priority)</option>
+                  <option value="CAT536-6764">CAT536-6764 (Cylinder - HIGH Priority)</option>
+                  <option value="CAT150-3014">CAT150-3014 (Large Casting)</option>
+                  <option value="CAT150-3011">CAT150-3011 (Large Casting)</option>
+                  <option value="CAT4T-6051">CAT4T-6051 (Heavy Duty - HIGH Priority)</option>
+                  <option value="CAT4T-5937">CAT4T-5937 (Heavy Duty - HIGH Priority)</option>
+                  <option value="CAT4T-4774">CAT4T-4774 (Heavy Duty - MEDIUM Priority)</option>
+                  <option value="CAT121-2077">CAT121-2077 (Large Assembly)</option>
+                  <option value="CAT522-7552">CAT522-7552 (Large Assembly)</option>
+                  <option value="OTHER">Other CAT Product</option>
+                </select>
+
+                {productDetailsMessage && (
+                  <div className="mt-3 rounded-lg bg-white px-3 py-2 text-sm text-gray-600">
+                    {productDetailsMessage}
                   </div>
-                </div>
+                )}
               </section>
 
-              <section className="grid md:grid-cols-2 gap-6">
-                <div className="space-y-6">
+              <section className="grid gap-6 md:grid-cols-2">
+                <div className="space-y-5">
                   <div>
-                    <label className="block text-sm font-semibold text-gray-700 mb-2" htmlFor="heatNumber">
-                      Heat Number <span className="text-red-500">*</span>
+                    <label className="block text-sm font-semibold text-gray-700" htmlFor="heatNumber">
+                      Heat Number <span className="text-rose-500">*</span>
                     </label>
                     <input
                       type="text"
@@ -358,12 +484,12 @@ export default function BlastExitMeasurement() {
                       value={formData.heatNumber}
                       onChange={handleFieldChange}
                       placeholder="Enter heat number"
-                      className="w-full rounded-xl border-2 border-indigo-100 px-4 py-3 text-base focus:outline-none focus:ring-4 focus:ring-indigo-100"
+                      className="mt-2 w-full rounded-xl border-2 border-gray-200 px-4 py-3 focus:outline-none focus:ring-4 focus:ring-amber-100"
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-semibold text-gray-700 mb-2" htmlFor="operator">
-                      Operator <span className="text-red-500">*</span>
+                    <label className="block text-sm font-semibold text-gray-700" htmlFor="operator">
+                      Operator <span className="text-rose-500">*</span>
                     </label>
                     <input
                       type="text"
@@ -373,13 +499,13 @@ export default function BlastExitMeasurement() {
                       value={formData.operator}
                       onChange={handleFieldChange}
                       placeholder="Your name"
-                      className="w-full rounded-xl border-2 border-indigo-100 px-4 py-3 text-base focus:outline-none focus:ring-4 focus:ring-indigo-100"
+                      className="mt-2 w-full rounded-xl border-2 border-gray-200 px-4 py-3 focus:outline-none focus:ring-4 focus:ring-amber-100"
                     />
                   </div>
                 </div>
-                <div className="space-y-6">
+                <div className="space-y-5">
                   <div>
-                    <label className="block text-sm font-semibold text-gray-700 mb-2" htmlFor="trackingNumber">
+                    <label className="block text-sm font-semibold text-gray-700" htmlFor="trackingNumber">
                       Tracking Number
                     </label>
                     <input
@@ -389,11 +515,11 @@ export default function BlastExitMeasurement() {
                       value={formData.trackingNumber}
                       onChange={handleFieldChange}
                       placeholder="Optional"
-                      className="w-full rounded-xl border-2 border-indigo-100 px-4 py-3 text-base focus:outline-none focus:ring-4 focus:ring-indigo-100"
+                      className="mt-2 w-full rounded-xl border-2 border-gray-200 px-4 py-3 focus:outline-none focus:ring-4 focus:ring-amber-100"
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-semibold text-gray-700 mb-2" htmlFor="shift">
+                    <label className="block text-sm font-semibold text-gray-700" htmlFor="shift">
                       Shift
                     </label>
                     <select
@@ -401,7 +527,7 @@ export default function BlastExitMeasurement() {
                       name="shift"
                       value={formData.shift}
                       onChange={handleFieldChange}
-                      className="w-full rounded-xl border-2 border-indigo-100 px-4 py-3 text-base focus:outline-none focus:ring-4 focus:ring-indigo-100"
+                      className="mt-2 w-full rounded-xl border-2 border-gray-200 px-4 py-3 focus:outline-none focus:ring-4 focus:ring-amber-100"
                     >
                       <option value="">Select Shift</option>
                       <option value="1">1st Shift</option>
@@ -415,81 +541,60 @@ export default function BlastExitMeasurement() {
               <section className="flex flex-wrap gap-3">
                 <button
                   type="button"
-                  onClick={openQRPlaceholder}
-                  className="inline-flex items-center justify-center rounded-full bg-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-indigo-700"
+                  onClick={autoFill536}
+                  className="rounded-full bg-amber-400 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-amber-500"
                 >
-                  📱 Scan QR
+                  ⚡ CAT536-6765
                 </button>
                 <button
                   type="button"
-                  onClick={loadLastHeatPlaceholder}
-                  className="inline-flex items-center justify-center rounded-full bg-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-indigo-700"
+                  onClick={autoFill4T}
+                  className="rounded-full bg-amber-400 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-amber-500"
                 >
-                  🔄 Last Heat
+                  ⚡ CAT4T-6051
                 </button>
                 <button
                   type="button"
-                  onClick={autoFillDefaults}
-                  className="inline-flex items-center justify-center rounded-full bg-emerald-500 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-emerald-600"
+                  onClick={autoFillLarge}
+                  className="rounded-full bg-amber-400 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-amber-500"
                 >
-                  ⚡ Quick Fill
+                  ⚡ CAT150-3011
                 </button>
               </section>
 
-              {isCat536 && (
-                <section className="space-y-4 rounded-2xl border-l-4 border-indigo-400 bg-slate-50 p-5 sm:p-6">
-                  <h3 className="text-xl font-semibold text-indigo-600 mb-4">CAT536-6765 Critical Dimensions</h3>
+              {isCylinder && (
+                <section className="space-y-4 rounded-2xl border-l-4 border-amber-400 bg-slate-50 p-5">
+                  <h3 className="text-xl font-semibold text-amber-500">Cylinder Casting Measurements</h3>
+                  <p className="text-sm text-gray-600">
+                    Use existing measurement sheet procedures. Pi tape for ODs, calipers for lengths.
+                  </p>
+
                   <div className="space-y-4">
-                    {measurementRows.map((row) => {
-                      const statusKey = toleranceStatuses[row.name]
-                      const statusClass = statusStyles[statusKey]?.input ?? statusStyles.NONE.input
+                    {cylinderMeasurements.map((measurement) => {
+                      const statusKey = toleranceStatuses[measurement.key]
+                      const styles = statusStyles[statusKey] || statusStyles.NONE
 
                       return (
-                        <div
-                          key={row.name}
-                          className="grid gap-4 rounded-2xl bg-white p-4 shadow-sm sm:grid-cols-[1.1fr_1fr_auto_auto] sm:items-end"
-                        >
+                        <div key={measurement.key} className="grid gap-4 rounded-xl bg-white p-4 shadow-sm sm:grid-cols-[1.5fr_1fr_auto] sm:items-end">
                           <div>
-                            <p className="text-base font-semibold text-gray-800">{row.label}</p>
+                            <p className="text-sm font-semibold text-gray-700">{measurement.label}</p>
+                            <p className="text-xs text-gray-500">Target {measurement.target?.toFixed(4)} ±{measurement.tolerance?.toFixed(4)}</p>
                           </div>
                           <div>
-                            <label className="block text-xs font-semibold uppercase tracking-wide text-gray-500 mb-1">
-                              Target: {row.target.toFixed(4)}
-                            </label>
                             <input
                               type="number"
                               step="0.0001"
                               inputMode="decimal"
-                              name={row.name}
-                              id={row.name}
-                              placeholder={row.target.toFixed(4)}
-                              value={formData[row.name]}
+                              name={measurement.key}
+                              id={measurement.key}
+                              placeholder={measurement.target?.toFixed(4) || '0.0000'}
+                              value={formData[measurement.key]}
                               onChange={handleFieldChange}
-                              className={`w-full rounded-xl border-2 px-4 py-3 text-center text-lg font-semibold text-gray-900 focus:outline-none focus:ring-4 focus:ring-indigo-100 transition ${statusClass}`}
+                              className={`w-full rounded-xl border-2 px-4 py-3 text-center text-lg font-semibold text-gray-800 focus:outline-none focus:ring-4 focus:ring-amber-100 ${styles.input}`}
                             />
                           </div>
-                          <div className="space-y-1">
-                            <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">
-                              Tolerance ±{row.tolerance.toFixed(4)}
-                            </p>
+                          <div className="text-right">
                             {renderStatusBadge(statusKey)}
-                          </div>
-                          <div>
-                            <label className="block text-xs font-semibold uppercase tracking-wide text-gray-500 mb-1">
-                              Method
-                            </label>
-                            <select
-                              name={row.methodName}
-                              value={formData[row.methodName]}
-                              onChange={handleFieldChange}
-                              className="w-full rounded-xl border-2 border-indigo-100 px-3 py-2 text-sm font-semibold text-gray-800 focus:outline-none focus:ring-4 focus:ring-indigo-100"
-                            >
-                              {row.methodOptions.map((option) => (
-                                <option key={option.value} value={option.value}>
-                                  {option.label}
-                                </option>
-                              ))}
-                            </select>
                           </div>
                         </div>
                       )
@@ -498,20 +603,25 @@ export default function BlastExitMeasurement() {
                 </section>
               )}
 
-              {isGenericProduct && (
-                <section className="rounded-2xl border-l-4 border-indigo-400 bg-slate-50 p-5 sm:p-6">
-                  <h3 className="text-xl font-semibold text-indigo-600 mb-4">Standard Dimensional Measurements</h3>
-                  <div className="grid gap-4 sm:grid-cols-2">
-                    {[
-                      { id: 'odMeasurement1', label: 'OD Measurement 1' },
-                      { id: 'odMeasurement2', label: 'OD Measurement 2' },
-                      { id: 'idMeasurement1', label: 'ID Measurement 1' },
-                      { id: 'idMeasurement2', label: 'ID Measurement 2' },
-                      { id: 'lengthMeasurement1', label: 'Length Measurement 1' },
-                      { id: 'lengthMeasurement2', label: 'Length Measurement 2' }
-                    ].map((field) => (
+              {showGenericMeasurements && (
+                <section className="rounded-2xl border-l-4 border-amber-400 bg-slate-50 p-5">
+                  <h3 className="text-xl font-semibold text-amber-500">
+                    {formData.productNumber === 'OTHER'
+                      ? 'Other CAT Product Measurements'
+                      : `${formData.productNumber} Measurements`}
+                  </h3>
+                  <p className="text-sm text-gray-600">
+                    Standard measurement procedures for non-cylinder CAT products.
+                  </p>
+                  <div className="mt-4 grid gap-4 sm:grid-cols-2">
+                    {[{ id: 'od1', label: 'Primary OD Measurement' },
+                      { id: 'od2', label: 'Secondary OD Measurement' },
+                      { id: 'od3', label: 'Third OD Measurement (if needed)' },
+                      { id: 'length1', label: 'Critical Length' },
+                      { id: 'id1', label: 'ID Measurement (if applicable)' },
+                      { id: 'id2', label: 'Second ID Measurement (if applicable)' }].map((field) => (
                       <div key={field.id}>
-                        <label className="block text-sm font-semibold text-gray-700 mb-1" htmlFor={field.id}>
+                        <label className="block text-sm font-semibold text-gray-700" htmlFor={field.id}>
                           {field.label}
                         </label>
                         <input
@@ -523,7 +633,7 @@ export default function BlastExitMeasurement() {
                           value={formData[field.id]}
                           onChange={handleFieldChange}
                           placeholder="0.0000"
-                          className="w-full rounded-xl border-2 border-indigo-100 px-4 py-3 text-base focus:outline-none focus:ring-4 focus:ring-indigo-100"
+                          className="mt-2 w-full rounded-xl border-2 border-gray-200 px-4 py-3 focus:outline-none focus:ring-4 focus:ring-amber-100"
                         />
                       </div>
                     ))}
@@ -531,39 +641,11 @@ export default function BlastExitMeasurement() {
                 </section>
               )}
 
-              <section className="rounded-2xl border-l-4 border-indigo-400 bg-slate-50 p-5 sm:p-6">
-                <h3 className="text-xl font-semibold text-indigo-600 mb-4">Casting Parameters (If Known)</h3>
-                <div className="grid gap-4 sm:grid-cols-2">
+              <section className="rounded-2xl border-l-4 border-amber-400 bg-slate-50 p-5">
+                <h3 className="text-xl font-semibold text-amber-500">Casting Conditions &amp; Quality</h3>
+                <div className="mt-4 grid gap-4 sm:grid-cols-2">
                   <div>
-                    <label className="block text-sm font-semibold text-gray-700 mb-1" htmlFor="moldTemperature">
-                      Mold Temperature (°F)
-                    </label>
-                    <input
-                      type="number"
-                      id="moldTemperature"
-                      name="moldTemperature"
-                      value={formData.moldTemperature}
-                      onChange={handleFieldChange}
-                      placeholder="Optional"
-                      className="w-full rounded-xl border-2 border-indigo-100 px-4 py-3 text-base focus:outline-none focus:ring-4 focus:ring-indigo-100"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-semibold text-gray-700 mb-1" htmlFor="pourTemperature">
-                      Pour Temperature (°F)
-                    </label>
-                    <input
-                      type="number"
-                      id="pourTemperature"
-                      name="pourTemperature"
-                      value={formData.pourTemperature}
-                      onChange={handleFieldChange}
-                      placeholder="Optional"
-                      className="w-full rounded-xl border-2 border-indigo-100 px-4 py-3 text-base focus:outline-none focus:ring-4 focus:ring-indigo-100"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-semibold text-gray-700 mb-1" htmlFor="materialAppearance">
+                    <label className="block text-sm font-semibold text-gray-700" htmlFor="materialAppearance">
                       Material Appearance
                     </label>
                     <select
@@ -571,42 +653,17 @@ export default function BlastExitMeasurement() {
                       name="materialAppearance"
                       value={formData.materialAppearance}
                       onChange={handleFieldChange}
-                      className="w-full rounded-xl border-2 border-indigo-100 px-4 py-3 text-base focus:outline-none focus:ring-4 focus:ring-indigo-100"
+                      className="mt-2 w-full rounded-xl border-2 border-gray-200 px-4 py-3 focus:outline-none focus:ring-4 focus:ring-amber-100"
                     >
                       <option value="">Select Condition</option>
-                      <option value="EXCELLENT">Excellent</option>
-                      <option value="GOOD">Good</option>
-                      <option value="FAIR">Fair - Minor Issues</option>
-                      <option value="POOR">Poor - Visible Defects</option>
+                      <option value="EXCELLENT">Excellent - Perfect Cast</option>
+                      <option value="GOOD">Good - Minor Surface Issues</option>
+                      <option value="FAIR">Fair - Some Defects</option>
+                      <option value="POOR">Poor - Major Problems</option>
                     </select>
                   </div>
                   <div>
-                    <label className="block text-sm font-semibold text-gray-700 mb-1" htmlFor="materialRiskScore">
-                      Risk Score (1-5)
-                    </label>
-                    <select
-                      id="materialRiskScore"
-                      name="materialRiskScore"
-                      value={formData.materialRiskScore}
-                      onChange={handleFieldChange}
-                      className="w-full rounded-xl border-2 border-indigo-100 px-4 py-3 text-base focus:outline-none focus:ring-4 focus:ring-indigo-100"
-                    >
-                      <option value="">Auto Calculate</option>
-                      <option value="1">1 - Low Risk</option>
-                      <option value="2">2 - Slight Risk</option>
-                      <option value="3">3 - Moderate Risk</option>
-                      <option value="4">4 - High Risk</option>
-                      <option value="5">5 - Very High Risk</option>
-                    </select>
-                  </div>
-                </div>
-              </section>
-
-              <section className="rounded-2xl border-l-4 border-indigo-400 bg-slate-50 p-5 sm:p-6">
-                <h3 className="text-xl font-semibold text-indigo-600 mb-4">Quality Assessment</h3>
-                <div className="grid gap-4 sm:grid-cols-2">
-                  <div>
-                    <label className="block text-sm font-semibold text-gray-700 mb-1" htmlFor="dimensionalStatus">
+                    <label className="block text-sm font-semibold text-gray-700" htmlFor="dimensionalStatus">
                       Overall Dimensional Status
                     </label>
                     <select
@@ -615,7 +672,7 @@ export default function BlastExitMeasurement() {
                       required
                       value={formData.dimensionalStatus}
                       onChange={handleFieldChange}
-                      className="w-full rounded-xl border-2 border-indigo-100 px-4 py-3 text-base focus:outline-none focus:ring-4 focus:ring-indigo-100"
+                      className="mt-2 w-full rounded-xl border-2 border-gray-200 px-4 py-3 focus:outline-none focus:ring-4 focus:ring-amber-100"
                     >
                       <option value="PASS">✅ PASS - All dimensions OK</option>
                       <option value="MARGINAL">⚠️ MARGINAL - Close to limits</option>
@@ -623,8 +680,8 @@ export default function BlastExitMeasurement() {
                     </select>
                   </div>
                   <div>
-                    <label className="block text-sm font-semibold text-gray-700 mb-1" htmlFor="heatTreatApproved">
-                      Approve for Heat Treatment?
+                    <label className="block text-sm font-semibold text-gray-700" htmlFor="heatTreatApproved">
+                      Heat Treatment Decision
                     </label>
                     <select
                       id="heatTreatApproved"
@@ -632,14 +689,14 @@ export default function BlastExitMeasurement() {
                       required
                       value={formData.heatTreatApproved}
                       onChange={handleFieldChange}
-                      className="w-full rounded-xl border-2 border-indigo-100 px-4 py-3 text-base focus:outline-none focus:ring-4 focus:ring-indigo-100"
+                      className="mt-2 w-full rounded-xl border-2 border-gray-200 px-4 py-3 focus:outline-none focus:ring-4 focus:ring-amber-100"
                     >
-                      <option value="true">✅ YES - Send to Heat Treat</option>
-                      <option value="false">❌ NO - Hold for Review</option>
+                      <option value="true">✅ APPROVED - Send to Heat Treat</option>
+                      <option value="false">❌ REJECTED - Hold/Scrap</option>
                     </select>
                   </div>
                   <div>
-                    <label className="block text-sm font-semibold text-gray-700 mb-1" htmlFor="surfaceCondition">
+                    <label className="block text-sm font-semibold text-gray-700" htmlFor="surfaceCondition">
                       Surface Condition
                     </label>
                     <select
@@ -647,37 +704,22 @@ export default function BlastExitMeasurement() {
                       name="surfaceCondition"
                       value={formData.surfaceCondition}
                       onChange={handleFieldChange}
-                      className="w-full rounded-xl border-2 border-indigo-100 px-4 py-3 text-base focus:outline-none focus:ring-4 focus:ring-indigo-100"
+                      className="mt-2 w-full rounded-xl border-2 border-gray-200 px-4 py-3 focus:outline-none focus:ring-4 focus:ring-amber-100"
                     >
                       <option value="">Select Condition</option>
                       <option value="SMOOTH">Smooth - No Issues</option>
                       <option value="ROUGH">Rough Surface</option>
                       <option value="INCLUSIONS">Visible Inclusions</option>
                       <option value="POROSITY">Surface Porosity</option>
-                      <option value="COLD_SHUT">Cold Shut</option>
-                    </select>
-                  </div>
-                  <div>
-                    <label className="block text-sm font-semibold text-gray-700 mb-1" htmlFor="requiresRework">
-                      Requires Rework?
-                    </label>
-                    <select
-                      id="requiresRework"
-                      name="requiresRework"
-                      value={formData.requiresRework}
-                      onChange={handleFieldChange}
-                      className="w-full rounded-xl border-2 border-indigo-100 px-4 py-3 text-base focus:outline-none focus:ring-4 focus:ring-indigo-100"
-                    >
-                      <option value="false">No</option>
-                      <option value="true">Yes - Minor Rework</option>
+                      <option value="COLD_SHUT">Cold Shut Present</option>
                     </select>
                   </div>
                 </div>
               </section>
 
               <section>
-                <label className="block text-sm font-semibold text-gray-700 mb-2" htmlFor="notes">
-                  Notes &amp; Observations
+                <label className="block text-sm font-semibold text-gray-700" htmlFor="notes">
+                  Measurement Notes &amp; Observations
                 </label>
                 <textarea
                   id="notes"
@@ -685,8 +727,8 @@ export default function BlastExitMeasurement() {
                   rows={4}
                   value={formData.notes}
                   onChange={handleFieldChange}
-                  placeholder="Any observations about casting quality, measurement challenges, or process conditions..."
-                  className="w-full rounded-2xl border-2 border-indigo-100 px-4 py-3 text-base focus:outline-none focus:ring-4 focus:ring-indigo-100"
+                  placeholder="Record observations about casting quality, measurement issues, or recommendations..."
+                  className="mt-2 w-full rounded-2xl border-2 border-gray-200 px-4 py-3 focus:outline-none focus:ring-4 focus:ring-amber-100"
                 />
               </section>
 
@@ -694,9 +736,9 @@ export default function BlastExitMeasurement() {
                 <button
                   type="submit"
                   disabled={isSubmitting}
-                  className="w-full rounded-full bg-gradient-to-r from-indigo-500 to-purple-600 px-6 py-4 text-lg font-semibold uppercase tracking-wide text-white shadow-lg transition hover:shadow-xl disabled:cursor-not-allowed disabled:from-gray-300 disabled:to-gray-400"
+                  className="w-full rounded-full bg-gradient-to-r from-amber-400 to-orange-500 px-6 py-4 text-lg font-semibold uppercase tracking-wide text-white shadow-lg transition hover:shadow-xl disabled:cursor-not-allowed disabled:from-gray-300 disabled:to-gray-400"
                 >
-                  {isSubmitting ? '⏳ Submitting...' : '📏 Submit Measurement'}
+                  {isSubmitting ? '⏳ Submitting...' : '📏 Submit CAT Measurement'}
                 </button>
               </div>
             </form>
