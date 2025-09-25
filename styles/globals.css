@@ -1,3 +1,17 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+@layer base {
+  :root {
+    color-scheme: light;
+  }
+
+  body {
+    @apply bg-spuncast-sky text-spuncast-slate antialiased;
+  }
+
+  a {
+    @apply text-spuncast-navy underline-offset-4 decoration-2 decoration-transparent transition hover:decoration-spuncast-red;
+  }
+}

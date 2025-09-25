@@ -4,71 +4,85 @@ import { Plus, QrCode, Ruler } from 'lucide-react'
 
 export default function Home() {
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen">
       {/* Header with Navigation */}
-      <header className="bg-white shadow-sm border-b">
-        <div className="max-w-7xl mx-auto px-4 py-4">
-          <div className="flex justify-between items-center">
-            <h1 className="text-3xl font-bold text-gray-900">🔧 Tool Change Tracker</h1>
-            <nav className="flex flex-wrap gap-3">
+      <header className="bg-white/95 backdrop-blur border-b border-spuncast-navy/10 shadow-sm">
+        <div className="max-w-7xl mx-auto px-4 py-5">
+          <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+            <div className="flex items-center gap-4">
+              <img
+                src="/spuncast-logo.svg"
+                alt="Spuncast logo"
+                className="h-14 w-auto drop-shadow-sm"
+              />
+              <div>
+                <p className="text-sm uppercase tracking-[0.3em] text-spuncast-red font-semibold">Tooling Excellence</p>
+                <h1 className="text-3xl font-bold text-spuncast-navy">Tool Change Tracker</h1>
+              </div>
+            </div>
+            <nav className="flex flex-wrap gap-3 text-sm font-semibold">
               <Link
                 href="/blast-exit"
-                className="flex items-center space-x-2 bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700 transition-colors"
+                className="group inline-flex items-center gap-2 rounded-full bg-spuncast-navy px-5 py-2.5 text-white shadow-brand transition hover:bg-spuncast-navyDark"
               >
-                <Ruler size={20} />
+                <span className="flex h-8 w-8 items-center justify-center rounded-full bg-white/10 text-white">
+                  <Ruler size={18} />
+                </span>
                 <span>Blast Exit Measurements</span>
               </Link>
               <Link
                 href="/qr-generator"
-                className="flex items-center space-x-2 bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors"
+                className="group inline-flex items-center gap-2 rounded-full bg-spuncast-red px-5 py-2.5 text-white shadow-brand transition hover:bg-spuncast-redDark"
               >
-                <QrCode size={20} />
+                <span className="flex h-8 w-8 items-center justify-center rounded-full bg-white/10 text-white">
+                  <QrCode size={18} />
+                </span>
                 <span>QR Generator</span>
               </Link>
             </nav>
           </div>
         </div>
       </header>
-      <div className="max-w-7xl mx-auto px-4 py-8">
-        {/* Action Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 mb-8">
-          <div className="bg-gradient-to-r from-green-500 to-green-600 p-6 rounded-lg text-white">
-            <div className="flex items-center space-x-3">
-              <Plus size={32} />
+      <div className="max-w-7xl mx-auto px-4 py-10">
+        <section className="mb-10 grid grid-cols-1 gap-6 md:grid-cols-2 xl:grid-cols-3">
+          <div className="rounded-2xl bg-white shadow-brand border border-white/60 p-6">
+            <div className="flex items-start gap-4">
+              <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-spuncast-red to-spuncast-redDark text-white shadow-brand">
+                <Plus size={28} />
+              </div>
               <div>
-                <h3 className="text-xl font-semibold">Record Tool Change</h3>
-                <p className="text-green-100">Log new tool changes below</p>
+                <h3 className="text-xl font-semibold text-spuncast-navy">Record Tool Change</h3>
+                <p className="text-sm text-spuncast-slate/70">Log the details of your latest tool swap in the form below.</p>
               </div>
             </div>
           </div>
 
-          <Link href="/blast-exit" className="group">
-            <div className="bg-gradient-to-r from-indigo-500 to-indigo-600 p-6 rounded-lg text-white hover:from-indigo-600 hover:to-indigo-700 transition-all transform group-hover:scale-105">
-              <div className="flex items-center space-x-3">
-                <Ruler size={32} />
-                <div>
-                  <h3 className="text-xl font-semibold">Blast Exit Measurements</h3>
-                  <p className="text-indigo-100">Capture casting inspection data</p>
-                </div>
+          <Link href="/blast-exit" className="group rounded-2xl bg-gradient-to-br from-spuncast-navy to-spuncast-navyDark p-6 text-white shadow-brand transition-transform hover:-translate-y-1">
+            <div className="flex items-start gap-4">
+              <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-white/15 text-white">
+                <Ruler size={28} />
+              </div>
+              <div>
+                <h3 className="text-xl font-semibold">Blast Exit Measurements</h3>
+                <p className="text-sm text-white/80">Capture casting inspection data with brand-aligned visuals.</p>
               </div>
             </div>
           </Link>
 
-          <Link href="/qr-generator" className="group">
-            <div className="bg-gradient-to-r from-purple-500 to-purple-600 p-6 rounded-lg text-white hover:from-purple-600 hover:to-purple-700 transition-all transform group-hover:scale-105">
-              <div className="flex items-center space-x-3">
-                <QrCode size={32} />
-                <div>
-                  <h3 className="text-xl font-semibold">Generate QR Codes</h3>
-                  <p className="text-purple-100">Create equipment QR codes</p>
-                </div>
+          <Link href="/qr-generator" className="group rounded-2xl bg-gradient-to-br from-spuncast-red to-spuncast-redDark p-6 text-white shadow-brand transition-transform hover:-translate-y-1">
+            <div className="flex items-start gap-4">
+              <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-white/15 text-white">
+                <QrCode size={28} />
+              </div>
+              <div>
+                <h3 className="text-xl font-semibold">Generate QR Codes</h3>
+                <p className="text-sm text-white/80">Produce equipment QR codes that match Spuncast branding.</p>
               </div>
             </div>
           </Link>
-        </div>
+        </section>
 
-        {/* Tool Change Form */}
-        <div className="bg-white rounded-lg shadow-sm border">
+        <div className="rounded-3xl border border-white/60 bg-white shadow-brand">
           <ToolChangeForm />
         </div>
       </div>
