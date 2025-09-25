@@ -382,13 +382,31 @@ export default function BlastExitMeasurement() {
         setLoadingError('')
         setTemplateNotice('')
 
-        const { data, error } = await supabase
-          .from('measurement_templates')
-          .select('*')
-          .like('product_number', 'CAT%')
-          .eq('active', true)
-          .order('priority_score', { ascending: false })
-          .order('product_number', { ascending: true })
+        const buildBaseQuery = () =>
+          supabase
+            .from('measurement_templates')
+            .select('*')
+            .like('product_number', 'CAT%')
+            .order('priority_score', { ascending: false })
+            .order('product_number', { ascending: true })
+
+        let data
+        let error
+        let usedActiveColumnFallback = false
+
+        ;({ data, error } = await buildBaseQuery().eq('active', true))
+
+        if (error && error.code === '42703') {
+          console.warn(
+            "⚠️ measurement_templates.active column missing in Supabase. Falling back to all CAT templates without an 'active' filter.",
+            error
+          )
+          setTemplateNotice(
+            "⚠️ measurement_templates.active column missing in Supabase. Showing all CAT templates until the column is added."
+          )
+          usedActiveColumnFallback = true
+          ;({ data, error } = await buildBaseQuery())
+        }
 
         if (error) {
           throw error
@@ -403,7 +421,9 @@ export default function BlastExitMeasurement() {
         }
 
         setTemplates(data)
-        setTemplateNotice('')
+        if (!usedActiveColumnFallback) {
+          setTemplateNotice('')
+        }
       } catch (error) {
         console.error('Error loading products:', error)
         setLoadingError(
