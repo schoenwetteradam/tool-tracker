@@ -31,6 +31,273 @@ const statusStyles = {
 
 const cylinderFields = ['barrelDiameter', 'flangeDiameter', 'overallLength', 'lengthToFlange']
 
+const fallbackTemplates = [
+  {
+    id: 'fallback-cat536-6765',
+    active: true,
+    product_number: 'CAT536-6765',
+    product_description: 'Cylinder Casting - HIGHEST Priority',
+    product_family: '536_SERIES',
+    priority_score: 100,
+    priority_label: 'HIGHEST PRIORITY',
+    measurement_instructions:
+      'Use measurement sheet 41A2360. Pi tape for ODs, calipers for lengths. All dimensions must pass before heat treat.',
+    critical_dimensions: 'Barrel OD, Flange OD, Overall Length, Length to Flange',
+    special_requirements: 'Heat treat approval requires PASS on all dimensions.',
+    measurement_frequency: 'Each piece prior to heat treat',
+    volume_classification: 'Critical',
+    requires_barrel_diameter: true,
+    barrel_diameter_target: 11.569,
+    barrel_diameter_tolerance: 0.02,
+    requires_flange_diameter: true,
+    flange_diameter_target: 12.87,
+    flange_diameter_tolerance: 0.02,
+    requires_overall_length: true,
+    overall_length_target: 59.519,
+    overall_length_tolerance: 0.02,
+    requires_length_to_flange: true,
+    length_to_flange_target: 54.622,
+    length_to_flange_tolerance: 0.02,
+    od_measurement_count: 0,
+    id_measurement_count: 0,
+    length_measurement_count: 0,
+    scrap_threshold_percentage: null,
+    rework_threshold_percentage: null
+  },
+  {
+    id: 'fallback-cat536-6763',
+    active: true,
+    product_number: 'CAT536-6763',
+    product_description: 'Cylinder Casting - HIGH Priority',
+    product_family: '536_SERIES',
+    priority_score: 95,
+    priority_label: 'HIGH PRIORITY',
+    measurement_instructions:
+      'Standard CAT 536 cylinder procedure. Verify barrel and flange diameters with Pi tape, confirm lengths with calibrated calipers.',
+    critical_dimensions: 'Barrel OD, Flange OD, Overall Length, Length to Flange',
+    special_requirements: 'Hold for review if any dimension trends toward marginal condition.',
+    measurement_frequency: 'Each piece prior to heat treat',
+    volume_classification: 'High',
+    requires_barrel_diameter: true,
+    barrel_diameter_target: 11.569,
+    barrel_diameter_tolerance: 0.02,
+    requires_flange_diameter: true,
+    flange_diameter_target: 12.87,
+    flange_diameter_tolerance: 0.02,
+    requires_overall_length: true,
+    overall_length_target: 59.519,
+    overall_length_tolerance: 0.02,
+    requires_length_to_flange: true,
+    length_to_flange_target: 54.622,
+    length_to_flange_tolerance: 0.02,
+    od_measurement_count: 0,
+    id_measurement_count: 0,
+    length_measurement_count: 0,
+    scrap_threshold_percentage: null,
+    rework_threshold_percentage: null
+  },
+  {
+    id: 'fallback-cat536-6764',
+    active: true,
+    product_number: 'CAT536-6764',
+    product_description: 'Cylinder Casting - HIGH Priority',
+    product_family: '536_SERIES',
+    priority_score: 92,
+    priority_label: 'HIGH PRIORITY',
+    measurement_instructions:
+      'Standard CAT 536 cylinder procedure. Confirm all OD and length features before releasing to heat treat.',
+    critical_dimensions: 'Barrel OD, Flange OD, Overall Length, Length to Flange',
+    special_requirements: 'Document any flange runout concerns prior to heat treat approval.',
+    measurement_frequency: 'Each piece prior to heat treat',
+    volume_classification: 'High',
+    requires_barrel_diameter: true,
+    barrel_diameter_target: 11.569,
+    barrel_diameter_tolerance: 0.02,
+    requires_flange_diameter: true,
+    flange_diameter_target: 12.87,
+    flange_diameter_tolerance: 0.02,
+    requires_overall_length: true,
+    overall_length_target: 59.519,
+    overall_length_tolerance: 0.02,
+    requires_length_to_flange: true,
+    length_to_flange_target: 54.622,
+    length_to_flange_tolerance: 0.02,
+    od_measurement_count: 0,
+    id_measurement_count: 0,
+    length_measurement_count: 0,
+    scrap_threshold_percentage: null,
+    rework_threshold_percentage: null
+  },
+  {
+    id: 'fallback-cat150-3014',
+    active: true,
+    product_number: 'CAT150-3014',
+    product_description: 'Large Casting',
+    product_family: 'LARGE_CASTING',
+    priority_score: 70,
+    priority_label: 'MEDIUM PRIORITY',
+    measurement_instructions:
+      'Standard CAT product measurement procedures. Record all available dimensions. Focus on critical features.',
+    critical_dimensions: 'Primary OD surfaces, critical length datums, bore alignments',
+    special_requirements: 'Note porosity or inclusions before routing to downstream machining.',
+    measurement_frequency: 'First-off and every 5 pieces',
+    volume_classification: 'Medium',
+    requires_barrel_diameter: false,
+    requires_flange_diameter: false,
+    requires_overall_length: false,
+    requires_length_to_flange: false,
+    od_measurement_count: 3,
+    id_measurement_count: 2,
+    length_measurement_count: 1,
+    scrap_threshold_percentage: null,
+    rework_threshold_percentage: null
+  },
+  {
+    id: 'fallback-cat150-3011',
+    active: true,
+    product_number: 'CAT150-3011',
+    product_description: 'Large Casting',
+    product_family: 'LARGE_CASTING',
+    priority_score: 68,
+    priority_label: 'MEDIUM PRIORITY',
+    measurement_instructions:
+      'Standard CAT product measurement procedures. Record all available dimensions. Focus on critical features.',
+    critical_dimensions: 'OD and ID machined surfaces, datum lengths',
+    special_requirements: 'Capture any surface defects or gating damage in notes.',
+    measurement_frequency: 'First-off and every 5 pieces',
+    volume_classification: 'Medium',
+    requires_barrel_diameter: false,
+    requires_flange_diameter: false,
+    requires_overall_length: false,
+    requires_length_to_flange: false,
+    od_measurement_count: 3,
+    id_measurement_count: 2,
+    length_measurement_count: 1,
+    scrap_threshold_percentage: null,
+    rework_threshold_percentage: null
+  },
+  {
+    id: 'fallback-cat4t-6051',
+    active: true,
+    product_number: 'CAT4T-6051',
+    product_description: 'Heavy Duty - HIGH Priority',
+    product_family: 'HEAVY_DUTY',
+    priority_score: 80,
+    priority_label: 'HIGH PRIORITY',
+    measurement_instructions:
+      'Standard CAT heavy-duty casting procedures. Confirm OD growth and flange flatness. Focus on machined datum surfaces.',
+    critical_dimensions: 'Multiple OD steps, flange surfaces, datum lengths',
+    special_requirements: 'Capture any cold shuts or heavy blast areas prior to machining.',
+    measurement_frequency: 'Each piece prior to heat treat',
+    volume_classification: 'High',
+    requires_barrel_diameter: false,
+    requires_flange_diameter: false,
+    requires_overall_length: false,
+    requires_length_to_flange: false,
+    od_measurement_count: 3,
+    id_measurement_count: 2,
+    length_measurement_count: 1,
+    scrap_threshold_percentage: null,
+    rework_threshold_percentage: null
+  },
+  {
+    id: 'fallback-cat4t-5937',
+    active: true,
+    product_number: 'CAT4T-5937',
+    product_description: 'Heavy Duty - HIGH Priority',
+    product_family: 'HEAVY_DUTY',
+    priority_score: 78,
+    priority_label: 'HIGH PRIORITY',
+    measurement_instructions:
+      'Standard CAT heavy-duty casting procedures. Confirm OD growth and flange flatness. Focus on machined datum surfaces.',
+    critical_dimensions: 'Multiple OD steps, flange surfaces, datum lengths',
+    special_requirements: 'Escalate if dimensional status trends marginal on consecutive pieces.',
+    measurement_frequency: 'Each piece prior to heat treat',
+    volume_classification: 'High',
+    requires_barrel_diameter: false,
+    requires_flange_diameter: false,
+    requires_overall_length: false,
+    requires_length_to_flange: false,
+    od_measurement_count: 3,
+    id_measurement_count: 2,
+    length_measurement_count: 1,
+    scrap_threshold_percentage: null,
+    rework_threshold_percentage: null
+  },
+  {
+    id: 'fallback-cat4t-4774',
+    active: true,
+    product_number: 'CAT4T-4774',
+    product_description: 'Heavy Duty - MEDIUM Priority',
+    product_family: 'HEAVY_DUTY',
+    priority_score: 60,
+    priority_label: 'MEDIUM PRIORITY',
+    measurement_instructions:
+      'Standard CAT heavy-duty casting procedures. Record OD and ID dimensions as available.',
+    critical_dimensions: 'OD growth, ID bores, overall length to datum',
+    special_requirements: 'Highlight any porosity or surface inclusions.',
+    measurement_frequency: 'First-off and every 3 pieces',
+    volume_classification: 'Medium',
+    requires_barrel_diameter: false,
+    requires_flange_diameter: false,
+    requires_overall_length: false,
+    requires_length_to_flange: false,
+    od_measurement_count: 3,
+    id_measurement_count: 2,
+    length_measurement_count: 1,
+    scrap_threshold_percentage: null,
+    rework_threshold_percentage: null
+  },
+  {
+    id: 'fallback-cat121-2077',
+    active: true,
+    product_number: 'CAT121-2077',
+    product_description: 'Large Assembly',
+    product_family: 'LARGE_ASSEMBLY',
+    priority_score: 55,
+    priority_label: 'STANDARD PRIORITY',
+    measurement_instructions:
+      'Standard CAT assembly procedures. Capture OD, ID, and key lengths prior to release.',
+    critical_dimensions: 'Assembly OD, fixture interface lengths, locating bores',
+    special_requirements: 'Ensure locator pads are free from blast scale before inspection.',
+    measurement_frequency: 'Per lot',
+    volume_classification: 'Low',
+    requires_barrel_diameter: false,
+    requires_flange_diameter: false,
+    requires_overall_length: false,
+    requires_length_to_flange: false,
+    od_measurement_count: 3,
+    id_measurement_count: 2,
+    length_measurement_count: 1,
+    scrap_threshold_percentage: null,
+    rework_threshold_percentage: null
+  },
+  {
+    id: 'fallback-cat522-7552',
+    active: true,
+    product_number: 'CAT522-7552',
+    product_description: 'Large Assembly',
+    product_family: 'LARGE_ASSEMBLY',
+    priority_score: 52,
+    priority_label: 'STANDARD PRIORITY',
+    measurement_instructions:
+      'Standard CAT assembly procedures. Capture OD, ID, and key lengths prior to release.',
+    critical_dimensions: 'Assembly OD, fixture interface lengths, locating bores',
+    special_requirements: 'Document any weld repair indications before progressing.',
+    measurement_frequency: 'Per lot',
+    volume_classification: 'Low',
+    requires_barrel_diameter: false,
+    requires_flange_diameter: false,
+    requires_overall_length: false,
+    requires_length_to_flange: false,
+    od_measurement_count: 3,
+    id_measurement_count: 2,
+    length_measurement_count: 1,
+    scrap_threshold_percentage: null,
+    rework_threshold_percentage: null
+  }
+]
+
 const createInitialFormData = () => ({
   productNumber: '',
   heatNumber: '',
@@ -106,12 +373,14 @@ export default function BlastExitMeasurement() {
   const [templates, setTemplates] = useState([])
   const [loadingTemplates, setLoadingTemplates] = useState(true)
   const [loadingError, setLoadingError] = useState('')
+  const [templateNotice, setTemplateNotice] = useState('')
 
   useEffect(() => {
     const loadTemplates = async () => {
       try {
         setLoadingTemplates(true)
         setLoadingError('')
+        setTemplateNotice('')
 
         const { data, error } = await supabase
           .from('measurement_templates')
@@ -126,14 +395,23 @@ export default function BlastExitMeasurement() {
         }
 
         if (!data || data.length === 0) {
-          throw new Error('No CAT products found in database')
+          setTemplates([...fallbackTemplates])
+          setTemplateNotice(
+            '⚠️ No CAT products found in Supabase. Using built-in fallback templates. Add measurement_templates rows to enable live data.'
+          )
+          return
         }
 
         setTemplates(data)
+        setTemplateNotice('')
       } catch (error) {
         console.error('Error loading products:', error)
         setLoadingError(
           `Error loading products: ${error.message}. Please verify Supabase credentials, table structure, and CAT templates.`
+        )
+        setTemplates([...fallbackTemplates])
+        setTemplateNotice(
+          '⚠️ Supabase connection unavailable. Using built-in fallback product list for offline testing.'
         )
       } finally {
         setLoadingTemplates(false)
@@ -577,6 +855,12 @@ export default function BlastExitMeasurement() {
               </div>
             )}
 
+            {templateNotice && (
+              <div className="mb-6 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-5 text-center text-amber-700 font-semibold">
+                {templateNotice}
+              </div>
+            )}
+
             {successMessage && (
               <div className="mb-6 rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-5 text-center text-emerald-700 font-semibold">
                 {successMessage}
@@ -589,7 +873,7 @@ export default function BlastExitMeasurement() {
               </div>
             )}
 
-            {!loadingTemplates && !loadingError && (
+            {!loadingTemplates && templates.length > 0 && (
               <form onSubmit={handleSubmit} className="space-y-8">
                 <section className="rounded-2xl border-2 border-indigo-100 bg-indigo-50/70 p-6">
                   <label className="block text-sm font-semibold text-slate-700" htmlFor="productNumber">
