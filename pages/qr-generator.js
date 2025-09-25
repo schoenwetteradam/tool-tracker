@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import Head from 'next/head'
 import Link from 'next/link'
-import Script from 'next/script'
 import { supabase } from '../lib/supabase'
 
 const QR_TYPE_LABELS = {
@@ -38,6 +37,7 @@ const QRGeneratorPage = () => {
   const [generatedUrl, setGeneratedUrl] = useState('')
   const [equipmentQrTitle, setEquipmentQrTitle] = useState('')
   const [equipmentQrGenerated, setEquipmentQrGenerated] = useState(false)
+  const [qrCodeLib, setQrCodeLib] = useState(null)
   const [qrLibraryReady, setQrLibraryReady] = useState(false)
   const [qrLibraryError, setQrLibraryError] = useState('')
 
@@ -56,6 +56,27 @@ const QRGeneratorPage = () => {
 
   useEffect(() => {
     let isMounted = true
+
+    const loadQrLibrary = async () => {
+      if (typeof window === 'undefined') return
+
+      try {
+        const module = await import('qrcode')
+        if (!isMounted) return
+
+        const qrModule = module?.default || module
+        setQrCodeLib(qrModule)
+        setQrLibraryReady(true)
+        setQrLibraryError('')
+      } catch (err) {
+        console.error('Error loading QR code library:', err)
+        if (!isMounted) return
+        setQrLibraryReady(false)
+        setQrLibraryError('Unable to load QR code library. QR generation may not work.')
+      }
+    }
+
+    loadQrLibrary()
 
     const loadEquipment = async () => {
       if (!supabaseConfigured) {
@@ -161,7 +182,7 @@ const QRGeneratorPage = () => {
       return
     }
 
-    if (!qrLibraryReady || typeof window === 'undefined' || !window.QRCode) {
+    if (!qrLibraryReady || !qrCodeLib) {
       alert('QR code library is still loading. Please try again in a moment.')
       return
     }
@@ -170,7 +191,7 @@ const QRGeneratorPage = () => {
     if (!canvas) return
 
     try {
-      await window.QRCode.toCanvas(canvas, generatedUrl, {
+      await qrCodeLib.toCanvas(canvas, generatedUrl, {
         width: 300,
         margin: 2,
         color: {
@@ -259,7 +280,7 @@ const QRGeneratorPage = () => {
       return
     }
 
-    if (!qrLibraryReady || typeof window === 'undefined' || !window.QRCode) {
+    if (!qrLibraryReady || !qrCodeLib) {
       alert('QR code library is still loading. Please try again in a moment.')
       return
     }
@@ -270,7 +291,7 @@ const QRGeneratorPage = () => {
     const trimmedUrl = customUrl.trim()
 
     try {
-      await window.QRCode.toCanvas(canvas, trimmedUrl, {
+      await qrCodeLib.toCanvas(canvas, trimmedUrl, {
         width: 300,
         margin: 2,
         color: {
@@ -354,13 +375,6 @@ const QRGeneratorPage = () => {
       <Head>
         <title>QR Code Generator</title>
       </Head>
-
-      <Script
-        src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"
-        strategy="lazyOnload"
-        onLoad={() => setQrLibraryReady(true)}
-        onError={() => setQrLibraryError('Unable to load QR code library. QR generation may not work.')}
-      />
 
       <div className="min-h-screen bg-gradient-to-br from-indigo-500 to-purple-600 p-6">
         <div className="mx-auto max-w-5xl rounded-3xl bg-white p-8 shadow-2xl">
