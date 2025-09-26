@@ -390,23 +390,7 @@ export default function BlastExitMeasurement() {
             .order('priority_score', { ascending: false })
             .order('product_number', { ascending: true })
 
-        let data
-        let error
-        let usedActiveColumnFallback = false
-
-        ;({ data, error } = await buildBaseQuery().eq('active', true))
-
-        if (error && error.code === '42703') {
-          console.warn(
-            "⚠️ measurement_templates.active column missing in Supabase. Falling back to all CAT templates without an 'active' filter.",
-            error
-          )
-          setTemplateNotice(
-            "⚠️ measurement_templates.active column missing in Supabase. Showing all CAT templates until the column is added."
-          )
-          usedActiveColumnFallback = true
-          ;({ data, error } = await buildBaseQuery())
-        }
+        const { data, error } = await buildBaseQuery()
 
         if (error) {
           throw error
@@ -420,10 +404,32 @@ export default function BlastExitMeasurement() {
           return
         }
 
-        setTemplates(data)
-        if (!usedActiveColumnFallback) {
+        const hasActiveColumn = data.some((template) => Object.prototype.hasOwnProperty.call(template, 'active'))
+
+        const activeTemplates = hasActiveColumn
+          ? data.filter((template) => template.active !== false)
+          : data
+
+        if (activeTemplates.length === 0) {
+          setTemplates([...fallbackTemplates])
+          setTemplateNotice(
+            '⚠️ No CAT products found in Supabase. Using built-in fallback templates. Add measurement_templates rows to enable live data.'
+          )
+          return
+        }
+
+        if (!hasActiveColumn) {
+          console.warn(
+            "⚠️ measurement_templates.active column missing in Supabase. Showing all CAT templates until the column is added."
+          )
+          setTemplateNotice(
+            "⚠️ measurement_templates.active column missing in Supabase. Showing all CAT templates until the column is added."
+          )
+        } else {
           setTemplateNotice('')
         }
+
+        setTemplates(activeTemplates)
       } catch (error) {
         console.error('Error loading products:', error)
         setLoadingError(
