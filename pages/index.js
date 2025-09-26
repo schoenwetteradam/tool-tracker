@@ -20,7 +20,7 @@ export default function Home() {
                 <h1 className="text-3xl font-bold text-spuncast-navy">Tool Change Tracker</h1>
               </div>
             </div>
-            <nav className="flex flex-wrap gap-3 text-sm font-semibold">
+            <nav className="flex flex-wrap gap-3 text-sm font-semibold" aria-label="Primary">
               <Link
                 href="/blast-exit"
                 className="group inline-flex items-center gap-2 rounded-full bg-spuncast-navy px-5 py-2.5 text-white shadow-brand transition hover:bg-spuncast-navyDark"
@@ -43,7 +43,7 @@ export default function Home() {
           </div>
         </div>
       </header>
-      <div className="max-w-7xl mx-auto px-4 py-10">
+      <main id="main-content" className="max-w-7xl mx-auto px-4 py-10">
         <section className="mb-10 grid grid-cols-1 gap-6 md:grid-cols-2 xl:grid-cols-3">
           <div className="rounded-2xl bg-white shadow-brand border border-white/60 p-6">
             <div className="flex items-start gap-4">
@@ -85,7 +85,7 @@ export default function Home() {
         <div className="rounded-3xl border border-white/60 bg-white shadow-brand">
           <ToolChangeForm />
         </div>
-      </div>
+      </main>
     </div>
   )
 }
