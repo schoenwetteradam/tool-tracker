@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import Head from 'next/head'
 import Link from 'next/link'
 import { supabase } from '../lib/supabase'
@@ -25,6 +25,26 @@ const formatEquipmentTitle = equipment => {
 
 const sanitizeFileName = value => value.replace(/[^a-zA-Z0-9]+/g, '_') || 'equipment'
 
+const buildQrImageUrl = (value, size = 300) =>
+  `https://api.qrserver.com/v1/create-qr-code/?size=${size}x${size}&data=${encodeURIComponent(value)}`
+
+const downloadQrImage = async (src, fileName) => {
+  const response = await fetch(src)
+  if (!response.ok) {
+    throw new Error('Unable to download QR code image')
+  }
+
+  const blob = await response.blob()
+  const blobUrl = URL.createObjectURL(blob)
+  const link = document.createElement('a')
+  link.href = blobUrl
+  link.download = `${fileName}.png`
+  document.body.appendChild(link)
+  link.click()
+  document.body.removeChild(link)
+  URL.revokeObjectURL(blobUrl)
+}
+
 const QRGeneratorPage = () => {
   const [activeTab, setActiveTab] = useState('equipment')
   const [equipment, setEquipment] = useState([])
@@ -37,18 +57,15 @@ const QRGeneratorPage = () => {
   const [generatedUrl, setGeneratedUrl] = useState('')
   const [equipmentQrTitle, setEquipmentQrTitle] = useState('')
   const [equipmentQrGenerated, setEquipmentQrGenerated] = useState(false)
-  const [qrCodeLib, setQrCodeLib] = useState(null)
-  const [qrLibraryReady, setQrLibraryReady] = useState(false)
-  const [qrLibraryError, setQrLibraryError] = useState('')
+  const [equipmentQrSrc, setEquipmentQrSrc] = useState('')
+  const [qrGenerationError, setQrGenerationError] = useState('')
 
   const [customUrl, setCustomUrl] = useState('')
   const [customTitle, setCustomTitle] = useState('')
   const [customGeneratedUrl, setCustomGeneratedUrl] = useState('')
   const [customQrTitle, setCustomQrTitle] = useState('Custom QR Code')
   const [customQrGenerated, setCustomQrGenerated] = useState(false)
-
-  const equipmentCanvasRef = useRef(null)
-  const customCanvasRef = useRef(null)
+  const [customQrSrc, setCustomQrSrc] = useState('')
 
   const supabaseConfigured = Boolean(
     process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
@@ -56,27 +73,6 @@ const QRGeneratorPage = () => {
 
   useEffect(() => {
     let isMounted = true
-
-    const loadQrLibrary = async () => {
-      if (typeof window === 'undefined') return
-
-      try {
-        const module = await import('qrcode')
-        if (!isMounted) return
-
-        const qrModule = module?.default || module
-        setQrCodeLib(qrModule)
-        setQrLibraryReady(true)
-        setQrLibraryError('')
-      } catch (err) {
-        console.error('Error loading QR code library:', err)
-        if (!isMounted) return
-        setQrLibraryReady(false)
-        setQrLibraryError('Unable to load QR code library. QR generation may not work.')
-      }
-    }
-
-    loadQrLibrary()
 
     const loadEquipment = async () => {
       if (!supabaseConfigured) {
@@ -144,6 +140,8 @@ const QRGeneratorPage = () => {
     const url = `${sanitizedBase}${path}?equipment=${encodeURIComponent(equipmentNumber)}&workcenter=${encodeURIComponent(workCenter)}`
     setGeneratedUrl(url)
     setEquipmentQrGenerated(false)
+    setEquipmentQrSrc('')
+    setQrGenerationError('')
   }, [selectedEquipment, qrType, baseUrl])
 
   useEffect(() => {
@@ -176,60 +174,44 @@ const QRGeneratorPage = () => {
     setSelectedEquipment(item)
   }
 
-  const handleGenerateEquipmentQR = async () => {
+  const handleGenerateEquipmentQR = () => {
     if (!selectedEquipment || !generatedUrl) {
       alert('Please select equipment and ensure a valid base URL.')
       return
     }
 
-    if (!qrLibraryReady || !qrCodeLib) {
-      alert('QR code library is still loading. Please try again in a moment.')
-      return
-    }
-
-    const canvas = equipmentCanvasRef.current
-    if (!canvas) return
-
     try {
-      await qrCodeLib.toCanvas(canvas, generatedUrl, {
-        width: 300,
-        margin: 2,
-        color: {
-          dark: '#000000',
-          light: '#FFFFFF'
-        }
-      })
-
       const typeLabel = QR_TYPE_LABELS[qrType] || 'QR Code'
+      const qrSrc = buildQrImageUrl(generatedUrl)
       setEquipmentQrTitle(`${formatEquipmentTitle(selectedEquipment)} (${typeLabel})`)
+      setEquipmentQrSrc(qrSrc)
       setEquipmentQrGenerated(true)
+      setQrGenerationError('')
     } catch (err) {
-      console.error('Error generating equipment QR code:', err)
-      alert(`Error generating QR code: ${err?.message || 'Unknown error'}`)
+      console.error('Error preparing equipment QR code:', err)
+      setQrGenerationError('Unable to generate QR code. Please try again.')
+      setEquipmentQrGenerated(false)
+      setEquipmentQrSrc('')
     }
   }
 
-  const handleDownloadEquipmentQR = () => {
-    if (!equipmentQrGenerated) return
+  const handleDownloadEquipmentQR = async () => {
+    if (!equipmentQrGenerated || !equipmentQrSrc) return
 
-    const canvas = equipmentCanvasRef.current
     const equipmentTitle = formatEquipmentTitle(selectedEquipment)
-    if (!canvas || !equipmentTitle) return
+    if (!equipmentTitle) return
 
-    const link = document.createElement('a')
-    const fileName = `QR_${sanitizeFileName(equipmentTitle)}`
-    link.download = `${fileName}.png`
-    link.href = canvas.toDataURL('image/png')
-    link.click()
+    try {
+      await downloadQrImage(equipmentQrSrc, `QR_${sanitizeFileName(equipmentTitle)}`)
+    } catch (err) {
+      console.error('Error downloading equipment QR:', err)
+      alert(`Error downloading QR code: ${err?.message || 'Unknown error'}`)
+    }
   }
 
   const handlePrintEquipmentQR = () => {
-    if (!equipmentQrGenerated || typeof window === 'undefined') return
+    if (!equipmentQrGenerated || typeof window === 'undefined' || !equipmentQrSrc) return
 
-    const canvas = equipmentCanvasRef.current
-    if (!canvas) return
-
-    const dataUrl = canvas.toDataURL('image/png')
     const printWindow = window.open('', '_blank')
 
     if (!printWindow) {
@@ -252,7 +234,7 @@ const QRGeneratorPage = () => {
         <body>
           <h2>${equipmentTitle}</h2>
           <p>Work Center: ${selectedEquipment?.work_center || 'N/A'}</p>
-          <img src="${dataUrl}" alt="QR Code" />
+          <img src="${equipmentQrSrc}" alt="QR Code" />
           <div class="url">${generatedUrl}</div>
         </body>
       </html>
@@ -274,61 +256,45 @@ const QRGeneratorPage = () => {
       })
   }
 
-  const handleGenerateCustomQR = async () => {
+  const handleGenerateCustomQR = () => {
     if (!customUrl.trim()) {
       alert('Please enter a URL for the custom QR code.')
       return
     }
 
-    if (!qrLibraryReady || !qrCodeLib) {
-      alert('QR code library is still loading. Please try again in a moment.')
-      return
-    }
-
-    const canvas = customCanvasRef.current
-    if (!canvas) return
-
     const trimmedUrl = customUrl.trim()
 
     try {
-      await qrCodeLib.toCanvas(canvas, trimmedUrl, {
-        width: 300,
-        margin: 2,
-        color: {
-          dark: '#000000',
-          light: '#FFFFFF'
-        }
-      })
-
+      const qrSrc = buildQrImageUrl(trimmedUrl)
       setCustomGeneratedUrl(trimmedUrl)
       setCustomQrTitle(customTitle.trim() || 'Custom QR Code')
       setCustomQrGenerated(true)
+      setCustomQrSrc(qrSrc)
+      setQrGenerationError('')
     } catch (err) {
-      console.error('Error generating custom QR code:', err)
-      alert(`Error generating QR code: ${err?.message || 'Unknown error'}`)
+      console.error('Error preparing custom QR code:', err)
+      setQrGenerationError('Unable to generate QR code. Please try again.')
+      setCustomQrGenerated(false)
+      setCustomQrSrc('')
     }
   }
 
-  const handleDownloadCustomQR = () => {
-    if (!customQrGenerated) return
-
-    const canvas = customCanvasRef.current
-    if (!canvas) return
+  const handleDownloadCustomQR = async () => {
+    if (!customQrGenerated || !customQrSrc) return
 
     const safeTitle = sanitizeFileName(customQrTitle)
-    const link = document.createElement('a')
-    link.download = `${safeTitle}.png`
-    link.href = canvas.toDataURL('image/png')
-    link.click()
+
+    try {
+      await downloadQrImage(customQrSrc, safeTitle)
+    } catch (err) {
+      console.error('Error downloading custom QR:', err)
+      alert(`Error downloading QR code: ${err?.message || 'Unknown error'}`)
+    }
   }
 
   const handlePrintCustomQR = () => {
-    if (!customQrGenerated || typeof window === 'undefined') return
+    if (!customQrGenerated || typeof window === 'undefined' || !customQrSrc) return
 
-    const canvas = customCanvasRef.current
-    if (!canvas) return
-
-    const dataUrl = canvas.toDataURL('image/png')
     const printWindow = window.open('', '_blank')
 
     if (!printWindow) {
@@ -348,7 +314,7 @@ const QRGeneratorPage = () => {
         </head>
         <body>
           <h2>${customQrTitle}</h2>
-          <img src="${dataUrl}" alt="Custom QR Code" />
+          <img src="${customQrSrc}" alt="Custom QR Code" />
           <div class="url">${customGeneratedUrl}</div>
         </body>
       </html>
@@ -376,7 +342,10 @@ const QRGeneratorPage = () => {
         <title>QR Code Generator</title>
       </Head>
 
-      <div className="min-h-screen bg-gradient-to-br from-spuncast-navy via-spuncast-navyDark to-spuncast-red p-6">
+      <main
+        id="main-content"
+        className="min-h-screen bg-gradient-to-br from-spuncast-navy via-spuncast-navyDark to-spuncast-red p-6"
+      >
         <div className="mx-auto max-w-5xl rounded-3xl border border-white/60 bg-white p-8 shadow-brand">
           <div className="text-center">
             <h1 className="text-3xl font-bold text-spuncast-navy">🏷️ QR Code Generator</h1>
@@ -410,20 +379,24 @@ const QRGeneratorPage = () => {
             </div>
           </div>
 
-          {qrLibraryError && (
-            <div className="mt-4 rounded-xl border border-rose-200 bg-rose-50 p-4 text-rose-700">
-              {qrLibraryError}
+          {qrGenerationError && (
+            <div className="mt-4 rounded-xl border border-rose-200 bg-rose-50 p-4 text-rose-700" role="alert">
+              {qrGenerationError}
             </div>
           )}
 
           <div className="mt-6">
             <section className={activeTab === 'equipment' ? 'block' : 'hidden'}>
               {loading ? (
-                <div className="rounded-2xl bg-spuncast-sky p-10 text-center text-spuncast-navy">
+                <div
+                  className="rounded-2xl bg-spuncast-sky p-10 text-center text-spuncast-navy"
+                  role="status"
+                  aria-live="polite"
+                >
                   🔄 Loading equipment from database...
                 </div>
               ) : error ? (
-                <div className="rounded-2xl border border-rose-200 bg-rose-50 p-6 text-rose-700">
+                <div className="rounded-2xl border border-rose-200 bg-rose-50 p-6 text-rose-700" role="alert">
                   ❌ {error}
                 </div>
               ) : (
@@ -547,14 +520,20 @@ const QRGeneratorPage = () => {
 
                       <div
                         className="rounded-2xl bg-white p-6 text-center shadow-lg"
-                        style={{ display: equipmentQrGenerated ? 'block' : 'none' }}
+                        style={{ display: equipmentQrGenerated && equipmentQrSrc ? 'block' : 'none' }}
+                        role="status"
+                        aria-live="polite"
                       >
                         <h3 className="text-lg font-semibold text-spuncast-navy">{equipmentQrTitle}</h3>
                         <div className="mt-3 rounded-xl border-2 border-spuncast-navy/10 bg-spuncast-sky p-3 text-sm text-spuncast-navy">
                           {generatedUrl}
                         </div>
                         <div className="mt-4 flex justify-center">
-                          <canvas ref={equipmentCanvasRef} className="max-w-full" />
+                          <img
+                            src={equipmentQrSrc}
+                            alt="Generated equipment QR code"
+                            className="max-w-xs rounded-lg border border-spuncast-navy/10"
+                          />
                         </div>
                         <div className="mt-5 flex flex-wrap justify-center gap-3">
                           <button
@@ -599,6 +578,8 @@ const QRGeneratorPage = () => {
                     onChange={event => {
                       setCustomUrl(event.target.value)
                       setCustomQrGenerated(false)
+                      setCustomQrSrc('')
+                      setQrGenerationError('')
                     }}
                     placeholder="Enter any URL..."
                     className="mt-2 w-full rounded-xl border-2 border-spuncast-navy/10 p-3 text-sm shadow-sm transition focus:border-spuncast-navy focus:outline-none focus:ring-2 focus:ring-spuncast-navy/20"
@@ -616,6 +597,8 @@ const QRGeneratorPage = () => {
                     onChange={event => {
                       setCustomTitle(event.target.value)
                       setCustomQrGenerated(false)
+                      setCustomQrSrc('')
+                      setQrGenerationError('')
                     }}
                     placeholder="Title to display with the QR code"
                     className="mt-2 w-full rounded-xl border-2 border-spuncast-navy/10 p-3 text-sm shadow-sm transition focus:border-spuncast-navy focus:outline-none focus:ring-2 focus:ring-spuncast-navy/20"
@@ -632,14 +615,20 @@ const QRGeneratorPage = () => {
 
                 <div
                   className="rounded-2xl bg-white p-6 text-center shadow-lg"
-                  style={{ display: customQrGenerated ? 'block' : 'none' }}
+                  style={{ display: customQrGenerated && customQrSrc ? 'block' : 'none' }}
+                  role="status"
+                  aria-live="polite"
                 >
                   <h3 className="text-lg font-semibold text-spuncast-navy">{customQrTitle}</h3>
                   <div className="mt-3 rounded-xl border-2 border-spuncast-navy/10 bg-spuncast-sky p-3 text-sm text-spuncast-navy">
                     {customGeneratedUrl}
                   </div>
                   <div className="mt-4 flex justify-center">
-                    <canvas ref={customCanvasRef} className="max-w-full" />
+                    <img
+                      src={customQrSrc}
+                      alt="Generated custom QR code"
+                      className="max-w-xs rounded-lg border border-spuncast-navy/10"
+                    />
                   </div>
                   <div className="mt-5 flex flex-wrap justify-center gap-3">
                     <button
@@ -675,7 +664,7 @@ const QRGeneratorPage = () => {
             </Link>
           </div>
         </div>
-      </div>
+      </main>
     </>
   )
 }

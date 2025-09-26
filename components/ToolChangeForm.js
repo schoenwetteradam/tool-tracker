@@ -492,7 +492,10 @@ const ToolChangeForm = () => {
     };
   };
 
-  const handleSubmit = async () => {
+  const handleSubmit = async (event) => {
+    if (event) {
+      event.preventDefault();
+    }
     setIsSubmitting(true);
     setSubmitStatus(null);
 
@@ -630,7 +633,7 @@ const ToolChangeForm = () => {
   const groupedFinishingTools = groupToolsByGeometry(availableTools.finishing);
 
   return (
-    <div className="max-w-6xl mx-auto rounded-3xl border border-white/60 bg-white p-8 shadow-brand">
+    <form onSubmit={handleSubmit} className="max-w-6xl mx-auto rounded-3xl border border-white/60 bg-white p-8 shadow-brand">
       <div className="mb-6">
         <h1 className="mb-2 text-3xl font-bold text-spuncast-navy">Enhanced Tool Change Form</h1>
         <p className="text-spuncast-slate/80">Professional tool tracking with inventory integration</p>
@@ -673,7 +676,11 @@ const ToolChangeForm = () => {
 
       {/* Success Message */}
       {submitStatus === 'success' && (
-        <div className="mb-6 bg-green-50 border border-green-200 rounded-lg p-4">
+        <div
+          className="mb-6 bg-green-50 border border-green-200 rounded-lg p-4"
+          role="status"
+          aria-live="polite"
+        >
           <div className="flex items-center">
             <CheckCircle className="h-5 w-5 text-green-600 mr-2" />
             <span className="text-green-800 font-medium">
@@ -685,7 +692,7 @@ const ToolChangeForm = () => {
 
       {/* Unauthorized Message */}
       {submitStatus === 'unauthorized' && (
-        <div className="mb-6 bg-red-50 border border-red-200 rounded-lg p-4">
+        <div className="mb-6 bg-red-50 border border-red-200 rounded-lg p-4" role="alert">
           <div className="flex items-center">
             <AlertTriangle className="h-5 w-5 text-red-600 mr-2" />
             <span className="text-red-800 font-medium">
@@ -697,7 +704,7 @@ const ToolChangeForm = () => {
 
       {/* Error Message */}
       {submitStatus === 'error' && (
-        <div className="mb-6 bg-red-50 border border-red-200 rounded-lg p-4">
+        <div className="mb-6 bg-red-50 border border-red-200 rounded-lg p-4" role="alert">
           <div className="flex items-center">
             <AlertTriangle className="h-5 w-5 text-red-600 mr-2" />
             <span className="text-red-800 font-medium">
@@ -715,12 +722,13 @@ const ToolChangeForm = () => {
         </h2>
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
           <div>
-            <label className="block text-sm font-medium text-spuncast-slate mb-1">
+            <label htmlFor="heat_number" className="block text-sm font-medium text-spuncast-slate mb-1">
               Heat Number <span className="text-red-500">*</span>
             </label>
             <input
               type="text"
               name="heat_number"
+              id="heat_number"
               value={formData.heat_number}
               onChange={handleInputChange}
               required
@@ -729,12 +737,13 @@ const ToolChangeForm = () => {
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-spuncast-slate mb-1">
+            <label htmlFor="date" className="block text-sm font-medium text-spuncast-slate mb-1">
               Date <span className="text-red-500">*</span>
             </label>
             <input
               type="date"
               name="date"
+              id="date"
               value={formData.date}
               onChange={handleInputChange}
               required
@@ -742,12 +751,13 @@ const ToolChangeForm = () => {
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-spuncast-slate mb-1">
+            <label htmlFor="time" className="block text-sm font-medium text-spuncast-slate mb-1">
               Time <span className="text-red-500">*</span>
             </label>
             <input
               type="time"
               name="time"
+              id="time"
               value={formData.time}
               onChange={handleInputChange}
               required
@@ -755,11 +765,12 @@ const ToolChangeForm = () => {
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-spuncast-slate mb-1">
+            <label htmlFor="shift" className="block text-sm font-medium text-spuncast-slate mb-1">
               Shift <span className="text-red-500">*</span>
             </label>
             <select
               name="shift"
+              id="shift"
               value={formData.shift}
               onChange={handleInputChange}
               required
@@ -782,11 +793,12 @@ const ToolChangeForm = () => {
         </h2>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
-            <label className="block text-sm font-medium text-spuncast-slate mb-1">
+            <label htmlFor="operator" className="block text-sm font-medium text-spuncast-slate mb-1">
               Operator <span className="text-red-500">*</span>
             </label>
             <select
               name="operator"
+              id="operator"
               value={selectedOperatorValue}
               onChange={handleOperatorSelect}
               required
@@ -802,12 +814,13 @@ const ToolChangeForm = () => {
             </select>
           </div>
           <div>
-            <label className="block text-sm font-medium text-spuncast-slate mb-1">
+            <label htmlFor="work_center" className="block text-sm font-medium text-spuncast-slate mb-1">
               Work Center <span className="text-red-500">*</span>
             </label>
             <input
               type="text"
               name="work_center"
+              id="work_center"
               value={formData.work_center}
               onChange={handleInputChange}
               required
@@ -816,12 +829,13 @@ const ToolChangeForm = () => {
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-spuncast-slate mb-1">
+            <label htmlFor="equipment_number" className="block text-sm font-medium text-spuncast-slate mb-1">
               Equipment Number <span className="text-red-500">*</span>
             </label>
             <input
               type="text"
               name="equipment_number"
+              id="equipment_number"
               value={formData.equipment_number}
               onChange={handleInputChange}
               required
@@ -830,11 +844,12 @@ const ToolChangeForm = () => {
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-spuncast-slate mb-1">
+            <label htmlFor="operation" className="block text-sm font-medium text-spuncast-slate mb-1">
               Operation <span className="text-red-500">*</span>
             </label>
             <select
               name="operation"
+              id="operation"
               value={formData.operation}
               onChange={handleInputChange}
               required
@@ -847,12 +862,13 @@ const ToolChangeForm = () => {
             </select>
           </div>
           <div>
-            <label className="block text-sm font-medium text-spuncast-slate mb-1">
+            <label htmlFor="part_number" className="block text-sm font-medium text-spuncast-slate mb-1">
               Part Number <span className="text-red-500">*</span>
             </label>
             <input
               type="text"
               name="part_number"
+              id="part_number"
               value={formData.part_number}
               onChange={handleInputChange}
               required
@@ -861,12 +877,13 @@ const ToolChangeForm = () => {
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-spuncast-slate mb-1">
+            <label htmlFor="job_number" className="block text-sm font-medium text-spuncast-slate mb-1">
               Job Number
             </label>
             <input
               type="text"
               name="job_number"
+              id="job_number"
               value={formData.job_number}
               onChange={handleInputChange}
               placeholder="Enter job number (optional)"
@@ -888,11 +905,12 @@ const ToolChangeForm = () => {
             <h3 className="text-lg font-medium text-spuncast-navy border-b pb-2">First Rougher (Optional)</h3>
             
             <div>
-              <label className="block text-sm font-medium text-spuncast-slate mb-1">
+              <label htmlFor="old_first_rougher" className="block text-sm font-medium text-spuncast-slate mb-1">
                 Current First Rougher
               </label>
               <select
                 name="old_first_rougher"
+                id="old_first_rougher"
                 value={formData.old_first_rougher}
                 onChange={handleInputChange}
                 className="w-full px-3 py-2 border border-spuncast-navy/10 rounded-md focus:outline-none focus:ring-2 focus:ring-spuncast-red/30"
@@ -928,11 +946,12 @@ const ToolChangeForm = () => {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-spuncast-slate mb-1">
+              <label htmlFor="new_first_rougher" className="block text-sm font-medium text-spuncast-slate mb-1">
                 New First Rougher
               </label>
               <select
                 name="new_first_rougher"
+                id="new_first_rougher"
                 value={formData.new_first_rougher}
                 onChange={handleInputChange}
                 disabled={formData.first_rougher_action !== 'New Insert'}
@@ -971,11 +990,12 @@ const ToolChangeForm = () => {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-spuncast-slate mb-1">
+              <label htmlFor="first_rougher_action" className="block text-sm font-medium text-spuncast-slate mb-1">
                 Rougher Action
               </label>
               <select
                 name="first_rougher_action"
+                id="first_rougher_action"
                 value={formData.first_rougher_action}
                 onChange={handleInputChange}
                 className="w-full px-3 py-2 border border-spuncast-navy/10 rounded-md focus:outline-none focus:ring-2 focus:ring-spuncast-red/30"
@@ -987,11 +1007,12 @@ const ToolChangeForm = () => {
             </div>
             {formData.first_rougher_action === 'New Insert' && formData.old_first_rougher && formData.new_first_rougher && (
               <div>
-                <label className="block text-sm font-medium text-spuncast-slate mb-1">
+                <label htmlFor="first_rougher_change_reason" className="block text-sm font-medium text-spuncast-slate mb-1">
                   Rougher Change Reason <span className="text-red-500">*</span>
                 </label>
                 <select
                   name="first_rougher_change_reason"
+                  id="first_rougher_change_reason"
                   value={formData.first_rougher_change_reason}
                   onChange={handleInputChange}
                   required
@@ -1014,11 +1035,12 @@ const ToolChangeForm = () => {
             <h3 className="text-lg font-medium text-spuncast-navy border-b pb-2">Finish Tool (Optional)</h3>
             
             <div>
-              <label className="block text-sm font-medium text-spuncast-slate mb-1">
+              <label htmlFor="old_finish_tool" className="block text-sm font-medium text-spuncast-slate mb-1">
                 Current Finish Tool
               </label>
               <select
                 name="old_finish_tool"
+                id="old_finish_tool"
                 value={formData.old_finish_tool}
                 onChange={handleInputChange}
                 className="w-full px-3 py-2 border border-spuncast-navy/10 rounded-md focus:outline-none focus:ring-2 focus:ring-spuncast-red/30"
@@ -1054,11 +1076,12 @@ const ToolChangeForm = () => {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-spuncast-slate mb-1">
+              <label htmlFor="new_finish_tool" className="block text-sm font-medium text-spuncast-slate mb-1">
                 New Finish Tool
               </label>
               <select
                 name="new_finish_tool"
+                id="new_finish_tool"
                 value={formData.new_finish_tool}
                 onChange={handleInputChange}
                 disabled={formData.finish_tool_action !== 'New Insert'}
@@ -1097,11 +1120,12 @@ const ToolChangeForm = () => {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-spuncast-slate mb-1">
+              <label htmlFor="finish_tool_action" className="block text-sm font-medium text-spuncast-slate mb-1">
                 Finish Action
               </label>
               <select
                 name="finish_tool_action"
+                id="finish_tool_action"
                 value={formData.finish_tool_action}
                 onChange={handleInputChange}
                 className="w-full px-3 py-2 border border-spuncast-navy/10 rounded-md focus:outline-none focus:ring-2 focus:ring-spuncast-red/30"
@@ -1113,11 +1137,12 @@ const ToolChangeForm = () => {
             </div>
             {formData.finish_tool_action === 'New Insert' && formData.old_finish_tool && formData.new_finish_tool && (
               <div>
-                <label className="block text-sm font-medium text-spuncast-slate mb-1">
+                <label htmlFor="finish_tool_change_reason" className="block text-sm font-medium text-spuncast-slate mb-1">
                   Finish Change Reason <span className="text-red-500">*</span>
                 </label>
                 <select
                   name="finish_tool_change_reason"
+                  id="finish_tool_change_reason"
                   value={formData.finish_tool_change_reason}
                   onChange={handleInputChange}
                   required
@@ -1145,11 +1170,12 @@ const ToolChangeForm = () => {
         </h2>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
-            <label className="block text-sm font-medium text-spuncast-slate mb-1">
+            <label htmlFor="material_appearance" className="block text-sm font-medium text-spuncast-slate mb-1">
               Material Appearance
             </label>
             <select
               name="material_appearance"
+              id="material_appearance"
               value={formData.material_appearance}
               onChange={handleInputChange}
               className="w-full px-3 py-2 border border-spuncast-navy/10 rounded-md focus:outline-none focus:ring-2 focus:ring-spuncast-red/30"
@@ -1163,11 +1189,12 @@ const ToolChangeForm = () => {
           </div>
         </div>
         <div className="mt-4">
-          <label className="block text-sm font-medium text-spuncast-slate mb-1">
+          <label htmlFor="notes" className="block text-sm font-medium text-spuncast-slate mb-1">
             Additional Notes
           </label>
           <textarea
             name="notes"
+            id="notes"
             value={formData.notes}
             onChange={handleInputChange}
             rows={3}
@@ -1180,7 +1207,7 @@ const ToolChangeForm = () => {
       {/* Submit Button */}
       <div className="flex justify-end">
         <button
-          onClick={handleSubmit}
+          type="submit"
           disabled={isSubmitting}
           className="flex items-center rounded-full bg-spuncast-navy px-6 py-3 text-white shadow-brand transition-colors duration-200 hover:bg-spuncast-navyDark disabled:cursor-not-allowed disabled:opacity-50"
         >
@@ -1197,7 +1224,7 @@ const ToolChangeForm = () => {
           )}
         </button>
       </div>
-    </div>
+    </form>
   );
 };
 

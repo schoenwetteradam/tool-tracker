@@ -855,7 +855,10 @@ export default function BlastExitMeasurement() {
       <Head>
         <title>📏 Blast Exit Measurement - Dynamic Products</title>
       </Head>
-      <div className="min-h-screen bg-gradient-to-br from-spuncast-navy via-spuncast-navyDark to-spuncast-red px-4 py-10">
+      <main
+        id="main-content"
+        className="min-h-screen bg-gradient-to-br from-spuncast-navy via-spuncast-navyDark to-spuncast-red px-4 py-10"
+      >
         <div className="mx-auto max-w-5xl">
           <div className="rounded-3xl border border-white/60 bg-white px-6 py-8 shadow-brand sm:px-10 sm:py-10">
             <header className="mb-8 text-center text-spuncast-slate">
@@ -864,31 +867,49 @@ export default function BlastExitMeasurement() {
             </header>
 
             {loadingTemplates && (
-              <div className="mb-6 rounded-2xl border border-spuncast-navy/10 bg-spuncast-sky px-4 py-5 text-center text-spuncast-navy">
+              <div
+                className="mb-6 rounded-2xl border border-spuncast-navy/10 bg-spuncast-sky px-4 py-5 text-center text-spuncast-navy"
+                role="status"
+                aria-live="polite"
+              >
                 🔄 Loading CAT products from database...
               </div>
             )}
 
             {loadingError && (
-              <div className="mb-6 rounded-2xl border border-rose-200 bg-rose-50 px-4 py-5 text-center text-rose-600">
+              <div
+                className="mb-6 rounded-2xl border border-rose-200 bg-rose-50 px-4 py-5 text-center text-rose-600"
+                role="alert"
+              >
                 ❌ {loadingError}
               </div>
             )}
 
             {templateNotice && (
-              <div className="mb-6 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-5 text-center text-amber-700 font-semibold">
+              <div
+                className="mb-6 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-5 text-center text-amber-700 font-semibold"
+                role="status"
+                aria-live="polite"
+              >
                 {templateNotice}
               </div>
             )}
 
             {successMessage && (
-              <div className="mb-6 rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-5 text-center text-emerald-700 font-semibold">
+              <div
+                className="mb-6 rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-5 text-center text-emerald-700 font-semibold"
+                role="status"
+                aria-live="polite"
+              >
                 {successMessage}
               </div>
             )}
 
             {errorMessage && (
-              <div className="mb-6 rounded-2xl border border-rose-200 bg-rose-50 px-4 py-5 text-center text-rose-700 font-semibold">
+              <div
+                className="mb-6 rounded-2xl border border-rose-200 bg-rose-50 px-4 py-5 text-center text-rose-700 font-semibold"
+                role="alert"
+              >
                 ❌ {errorMessage}
               </div>
             )}
@@ -1326,7 +1347,7 @@ export default function BlastExitMeasurement() {
             )}
           </div>
         </div>
-      </div>
+      </main>
     </>
   )
 }

@@ -382,6 +382,7 @@ export default function Dashboard() {
             <select
               value={selectedDateRange}
               onChange={(e) => setSelectedDateRange(Number(e.target.value))}
+              aria-label="Select dashboard date range"
               className="rounded-full border border-spuncast-navy/10 bg-white px-4 py-2 text-sm font-medium text-spuncast-slate focus:outline-none focus:ring-2 focus:ring-spuncast-navy/20"
             >
               <option value={7}>Last 7 days</option>
@@ -389,6 +390,7 @@ export default function Dashboard() {
               <option value={90}>Last 90 days</option>
             </select>
             <button
+              type="button"
               onClick={loadDashboardData}
               className="inline-flex items-center gap-2 rounded-full bg-spuncast-red px-5 py-2 text-sm font-semibold text-white shadow-brand transition hover:bg-spuncast-redDark"
             >
@@ -399,7 +401,7 @@ export default function Dashboard() {
         </div>
       </header>
 
-      <div className="mx-auto max-w-7xl space-y-8 px-4 py-8">
+      <main id="main-content" className="mx-auto max-w-7xl space-y-8 px-4 py-8">
         {/* Quick Stats Cards */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
           <div className="rounded-2xl border border-white/60 bg-white p-6 shadow-brand">
@@ -608,7 +610,7 @@ export default function Dashboard() {
 
         {/* Recent Tool Changes Table */}
         <ToolChangesTable toolChanges={toolChanges} />
-      </div>
+      </main>
     </div>
   )
 }
