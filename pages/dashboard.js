@@ -36,6 +36,11 @@ import {
   Package
 } from 'lucide-react'
 
+const toNumber = value => {
+  const numericValue = Number(value)
+  return Number.isFinite(numericValue) ? numericValue : 0
+}
+
 const mapToolChangeForDisplay = (toolChange) => {
   const operatorDisplay =
     toolChange.operator ||
@@ -67,8 +72,12 @@ const mapToolChangeForDisplay = (toolChange) => {
     toolChange.finish_tool_change_reason ||
     'N/A'
 
+  const downtimeSource =
+    toolChange.downtime_minutes ?? toolChange.tool_change_duration_minutes
   const downtimeValue =
-    toolChange.downtime_minutes ?? toolChange.tool_change_duration_minutes ?? 'N/A'
+    downtimeSource === null || downtimeSource === undefined
+      ? 'N/A'
+      : toNumber(downtimeSource)
 
   const totalCostValue = Number(toolChange.total_tool_cost ?? 0)
 
@@ -85,7 +94,10 @@ const mapToolChangeForDisplay = (toolChange) => {
     partNumber: toolChange.part_number || 'N/A',
     jobNumber: toolChange.job_number || 'N/A',
     heatNumber: toolChange.heat_number || 'N/A',
-    piecesProduced: toolChange.pieces_produced ?? 'N/A',
+    piecesProduced:
+      toolChange.pieces_produced === null || toolChange.pieces_produced === undefined
+        ? 'N/A'
+        : toNumber(toolChange.pieces_produced),
     totalCost: Number.isFinite(totalCostValue) ? totalCostValue : 0,
     notes: toolChange.notes || '',
     rawData: toolChange
@@ -305,7 +317,10 @@ export default function Dashboard() {
       return {
         date: new Date(date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
         changes: dayChanges.length,
-        downtime: dayChanges.reduce((sum, change) => sum + (change.downtime_minutes || 0), 0)
+        downtime: dayChanges.reduce(
+          (sum, change) => sum + toNumber(change.downtime_minutes ?? change.tool_change_duration_minutes),
+          0
+        )
       }
     })
 
@@ -335,8 +350,10 @@ export default function Dashboard() {
           }
         }
         operatorStats[change.operator].changes++
-        operatorStats[change.operator].totalPieces += change.pieces_produced || 0
-        operatorStats[change.operator].totalDowntime += change.downtime_minutes || 0
+        operatorStats[change.operator].totalPieces += toNumber(change.pieces_produced)
+        operatorStats[change.operator].totalDowntime += toNumber(
+          change.downtime_minutes ?? change.tool_change_duration_minutes
+        )
       }
     })
 
