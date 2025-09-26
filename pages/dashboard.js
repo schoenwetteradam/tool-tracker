@@ -46,8 +46,20 @@ const mapToolChangeForDisplay = (toolChange) => {
   const equipmentDisplay =
     toolChange.machine_number || toolChange.equipment_number || toolChange.work_center || 'N/A'
 
-  const firstRougherDisplay = toolChange.first_rougher || toolChange.new_tool_id || 'N/A'
-  const finishToolDisplay = toolChange.finish_tool || toolChange.new_tool_id || 'N/A'
+  const firstRougherDisplay =
+    toolChange.new_first_rougher ||
+    toolChange.old_first_rougher ||
+    toolChange.first_rougher ||
+    toolChange.new_tool_id ||
+    toolChange.old_tool_id ||
+    'N/A'
+  const finishToolDisplay =
+    toolChange.new_finish_tool ||
+    toolChange.old_finish_tool ||
+    toolChange.finish_tool ||
+    toolChange.new_tool_id ||
+    toolChange.old_tool_id ||
+    'N/A'
 
   const changeReasonDisplay =
     toolChange.change_reason ||
@@ -208,8 +220,10 @@ const debugToolChangeData = async () => {
         original_operator: latest.operator,
         original_machine: latest.machine_number,
         original_equipment: latest.equipment_number,
-        original_first_rougher: latest.first_rougher,
-        original_finish_tool: latest.finish_tool,
+        original_new_first_rougher: latest.new_first_rougher,
+        original_old_first_rougher: latest.old_first_rougher,
+        original_new_finish_tool: latest.new_finish_tool,
+        original_old_finish_tool: latest.old_finish_tool,
         original_change_reason: latest.change_reason,
         mapped_operator: mapped.operator,
         mapped_equipment: mapped.equipment,
