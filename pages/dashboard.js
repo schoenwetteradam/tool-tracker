@@ -74,6 +74,28 @@ const getDowntimeMinutes = change => {
   return DEFAULT_DOWNTIME_MINUTES
 }
 
+const parseCostValue = value => {
+  if (value === null || value === undefined) {
+    return null
+  }
+
+  if (typeof value === 'string') {
+    const trimmed = value.trim()
+    if (trimmed === '') {
+      return null
+    }
+
+    const parsedFromString = Number(trimmed)
+    return Number.isFinite(parsedFromString) ? parsedFromString : null
+  }
+
+  if (typeof value === 'number') {
+    return Number.isFinite(value) ? value : null
+  }
+
+  return null
+}
+
 const mapToolChangeForDisplay = (toolChange) => {
   const operatorDisplay =
     toolChange.operator ||
@@ -107,7 +129,17 @@ const mapToolChangeForDisplay = (toolChange) => {
 
   const downtimeValue = getDowntimeMinutes(toolChange)
 
-  const totalCostValue = Number(toolChange.total_tool_cost ?? 0)
+  const recordedTotalCost = parseCostValue(toolChange.total_tool_cost)
+  const rougherCost = parseCostValue(toolChange.rougher_cost)
+  const finishCost = parseCostValue(toolChange.finish_cost)
+
+  let totalCostValue = 0
+
+  if (recordedTotalCost !== null) {
+    totalCostValue = recordedTotalCost
+  } else if (rougherCost !== null || finishCost !== null) {
+    totalCostValue = (rougherCost || 0) + (finishCost || 0)
+  }
 
   return {
     id: toolChange.id,
