@@ -26,10 +26,35 @@ export default async function handler(req, res) {
       Object.entries(measurementData).filter(([_, value]) => value !== undefined)
     )
 
-    const { data, error } = await supabase
-      .from('dimensional_measurements')
-      .insert([sanitizedData])
-      .select()
+    const attemptInsert = async (payload) =>
+      supabase.from('dimensional_measurements').insert([payload]).select()
+
+    let { data, error } = await attemptInsert(sanitizedData)
+
+    if (error) {
+      const missingProductFamily =
+        error.message &&
+        error.message.includes("Could not find the 'product_family' column of 'dimensional_measurements'")
+
+      if (missingProductFamily && 'product_family' in sanitizedData) {
+        console.warn(
+          "Supabase schema cache is missing 'product_family'. Retrying insert without this field.",
+          error
+        )
+
+        const { product_family, ...fallbackData } = sanitizedData
+        const fallbackResult = await attemptInsert(fallbackData)
+
+        data = fallbackResult.data
+        error = fallbackResult.error
+
+        if (!error) {
+          console.warn(
+            "Inserted dimensional measurement without 'product_family' due to schema cache mismatch."
+          )
+        }
+      }
+    }
 
     if (error) {
       console.error('Error inserting dimensional measurement:', error)
