@@ -41,6 +41,39 @@ const toNumber = value => {
   return Number.isFinite(numericValue) ? numericValue : 0
 }
 
+const DEFAULT_DOWNTIME_MINUTES = 10
+
+const parseOptionalNumber = value => {
+  if (value === null || value === undefined) {
+    return null
+  }
+
+  if (typeof value === 'string' && value.trim() === '') {
+    return null
+  }
+
+  const numericValue = Number(value)
+  return Number.isFinite(numericValue) ? numericValue : null
+}
+
+const getDowntimeMinutes = change => {
+  if (!change) {
+    return DEFAULT_DOWNTIME_MINUTES
+  }
+
+  const primaryDowntime = parseOptionalNumber(change.downtime_minutes)
+  if (primaryDowntime !== null) {
+    return primaryDowntime
+  }
+
+  const legacyDowntime = parseOptionalNumber(change.tool_change_duration_minutes)
+  if (legacyDowntime !== null) {
+    return legacyDowntime
+  }
+
+  return DEFAULT_DOWNTIME_MINUTES
+}
+
 const mapToolChangeForDisplay = (toolChange) => {
   const operatorDisplay =
     toolChange.operator ||
@@ -72,12 +105,7 @@ const mapToolChangeForDisplay = (toolChange) => {
     toolChange.finish_tool_change_reason ||
     'N/A'
 
-  const downtimeSource =
-    toolChange.downtime_minutes ?? toolChange.tool_change_duration_minutes
-  const downtimeValue =
-    downtimeSource === null || downtimeSource === undefined
-      ? 'N/A'
-      : toNumber(downtimeSource)
+  const downtimeValue = getDowntimeMinutes(toolChange)
 
   const totalCostValue = Number(toolChange.total_tool_cost ?? 0)
 
@@ -321,7 +349,7 @@ export default function Dashboard() {
         date: new Date(date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
         changes: dayChanges.length,
         downtime: dayChanges.reduce(
-          (sum, change) => sum + toNumber(change.downtime_minutes ?? change.tool_change_duration_minutes),
+          (sum, change) => sum + getDowntimeMinutes(change),
           0
         )
       }
@@ -354,9 +382,7 @@ export default function Dashboard() {
         }
         operatorStats[change.operator].changes++
         operatorStats[change.operator].totalPieces += toNumber(change.pieces_produced)
-        operatorStats[change.operator].totalDowntime += toNumber(
-          change.downtime_minutes ?? change.tool_change_duration_minutes
-        )
+        operatorStats[change.operator].totalDowntime += getDowntimeMinutes(change)
       }
     })
 
