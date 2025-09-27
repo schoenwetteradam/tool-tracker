@@ -273,12 +273,15 @@ export default function Dashboard() {
   const loadDashboardData = async () => {
     setIsLoading(true)
     try {
-      const [changes, analyticsData, costData] = await Promise.all([
+      const [changes, analyticsData] = await Promise.all([
         getToolChanges(),
-        getInsertUsageAnalytics(selectedDateRange),
-        getToolCostAnalysis(selectedDateRange)
+        getInsertUsageAnalytics(selectedDateRange)
       ])
-      
+
+      const costData = await getToolCostAnalysis(selectedDateRange, {
+        preloadedChanges: changes
+      })
+
       setToolChanges(changes || [])
       setAnalytics(analyticsData)
       setCostAnalysis(costData)
