@@ -1,6 +1,6 @@
 import ToolChangeForm from '../components/ToolChangeForm'
 import Link from 'next/link'
-import { Plus, QrCode, Ruler } from 'lucide-react'
+import { BarChart3, Plus, QrCode, Ruler } from 'lucide-react'
 
 export default function Home() {
   return (
@@ -21,6 +21,15 @@ export default function Home() {
               </div>
             </div>
             <nav className="flex flex-wrap gap-3 text-sm font-semibold" aria-label="Primary">
+              <Link
+                href="/after-blast-dashboard"
+                className="group inline-flex items-center gap-2 rounded-full bg-spuncast-sky px-5 py-2.5 text-spuncast-navy shadow-brand transition hover:-translate-y-0.5 hover:bg-spuncast-sky/80"
+              >
+                <span className="flex h-8 w-8 items-center justify-center rounded-full bg-white/60 text-spuncast-navy">
+                  <BarChart3 size={18} />
+                </span>
+                <span>After Blast Dashboard</span>
+              </Link>
               <Link
                 href="/blast-exit"
                 className="group inline-flex items-center gap-2 rounded-full bg-spuncast-navy px-5 py-2.5 text-white shadow-brand transition hover:bg-spuncast-navyDark"
@@ -65,6 +74,18 @@ export default function Home() {
               <div>
                 <h3 className="text-xl font-semibold">Blast Exit Measurements</h3>
                 <p className="text-sm text-white/80">Capture casting inspection data with brand-aligned visuals.</p>
+              </div>
+            </div>
+          </Link>
+
+          <Link href="/after-blast-dashboard" className="group rounded-2xl bg-gradient-to-br from-spuncast-sky to-spuncast-sky/70 p-6 text-spuncast-navy shadow-brand transition-transform hover:-translate-y-1">
+            <div className="flex items-start gap-4">
+              <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-white/60 text-spuncast-navy">
+                <BarChart3 size={28} />
+              </div>
+              <div>
+                <h3 className="text-xl font-semibold">After Blast Dashboard</h3>
+                <p className="text-sm text-spuncast-navy/70">Review dimensional trends and heat treat approvals in real time.</p>
               </div>
             </div>
           </Link>
