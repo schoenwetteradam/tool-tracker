@@ -298,6 +298,64 @@ const fallbackTemplates = [
   }
 ]
 
+const normalizeTemplateRecord = (template) => {
+  if (!template || typeof template !== 'object') {
+    return template
+  }
+
+  const normalized = { ...template }
+
+  const joinTextArray = (value, joiner = ', ') => {
+    if (!Array.isArray(value)) {
+      return value
+    }
+
+    return value
+      .map((item) => (typeof item === 'string' ? item.trim() : ''))
+      .filter(Boolean)
+      .join(joiner)
+  }
+
+  normalized.critical_dimensions = joinTextArray(normalized.critical_dimensions)
+  normalized.measurement_instructions = joinTextArray(
+    normalized.measurement_instructions,
+    ' '
+  )
+
+  const numericFields = [
+    'priority_score',
+    'barrel_diameter_target',
+    'barrel_diameter_tolerance',
+    'flange_diameter_target',
+    'flange_diameter_tolerance',
+    'overall_length_target',
+    'overall_length_tolerance',
+    'length_to_flange_target',
+    'length_to_flange_tolerance',
+    'od_measurement_count',
+    'id_measurement_count',
+    'length_measurement_count',
+    'scrap_threshold_percentage',
+    'rework_threshold_percentage'
+  ]
+
+  numericFields.forEach((field) => {
+    if (normalized[field] === null || normalized[field] === undefined) {
+      return
+    }
+
+    const parsed = Number(normalized[field])
+    normalized[field] = Number.isFinite(parsed)
+      ? parsed
+      : normalized[field]
+  })
+
+  return normalized
+}
+
+const getNormalizedFallbackTemplates = () =>
+  fallbackTemplates.map((template) => normalizeTemplateRecord(template))
+
 const createInitialFormData = () => ({
   productNumber: '',
   heatNumber: '',
@@ -397,7 +455,7 @@ export default function BlastExitMeasurement() {
         }
 
         if (!data || data.length === 0) {
-          setTemplates([...fallbackTemplates])
+          setTemplates(getNormalizedFallbackTemplates())
           setTemplateNotice(
             '⚠️ No CAT products found in Supabase. Using built-in fallback templates. Add measurement_templates rows to enable live data.'
           )
@@ -411,7 +469,7 @@ export default function BlastExitMeasurement() {
           : data
 
         if (activeTemplates.length === 0) {
-          setTemplates([...fallbackTemplates])
+          setTemplates(getNormalizedFallbackTemplates())
           setTemplateNotice(
             '⚠️ No CAT products found in Supabase. Using built-in fallback templates. Add measurement_templates rows to enable live data.'
           )
@@ -429,13 +487,13 @@ export default function BlastExitMeasurement() {
           setTemplateNotice('')
         }
 
-        setTemplates(activeTemplates)
+        setTemplates(activeTemplates.map((template) => normalizeTemplateRecord(template)))
       } catch (error) {
         console.error('Error loading products:', error)
         setLoadingError(
           `Error loading products: ${error.message}. Please verify Supabase credentials, table structure, and CAT templates.`
         )
-        setTemplates([...fallbackTemplates])
+        setTemplates(getNormalizedFallbackTemplates())
         setTemplateNotice(
           '⚠️ Supabase connection unavailable. Using built-in fallback product list for offline testing.'
         )
