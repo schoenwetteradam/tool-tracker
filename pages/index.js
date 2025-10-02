@@ -1,6 +1,6 @@
 import ToolChangeForm from '../components/ToolChangeForm'
 import Link from 'next/link'
-import { BarChart3, Plus, QrCode, Ruler, Flame } from 'lucide-react'
+import { BarChart3, Plus, QrCode, Ruler, Flame, Factory } from 'lucide-react'
 
 export default function Home() {
   return (
@@ -47,6 +47,15 @@ export default function Home() {
                   <QrCode size={18} />
                 </span>
                 <span>QR Generator</span>
+              </Link>
+              <Link
+                href="/pour-report"
+                className="group inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-spuncast-sky to-spuncast-navy px-5 py-2.5 text-white shadow-brand transition hover:from-spuncast-sky/90 hover:to-spuncast-navyDark"
+              >
+                <span className="flex h-8 w-8 items-center justify-center rounded-full bg-white/10 text-white">
+                  <Factory size={18} />
+                </span>
+                <span>Melt &amp; Cast Entry</span>
               </Link>
               <Link
                 href="/heat-treatment"
@@ -119,6 +128,18 @@ export default function Home() {
               <div>
                 <h3 className="text-xl font-semibold">Heat Treatment Management</h3>
                 <p className="text-sm text-white/80">Record cycles, view analytics, and monitor furnace utilization.</p>
+              </div>
+            </div>
+          </Link>
+
+          <Link href="/pour-report" className="group rounded-2xl bg-gradient-to-br from-spuncast-sky to-spuncast-navy p-6 text-white shadow-brand transition-transform hover:-translate-y-1">
+            <div className="flex items-start gap-4">
+              <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-white/15 text-white">
+                <Factory size={28} />
+              </div>
+              <div>
+                <h3 className="text-xl font-semibold">Melt &amp; Cast Data Entry</h3>
+                <p className="text-sm text-white/80">Capture melt furnace, ladle, and casting metrics in one streamlined form.</p>
               </div>
             </div>
           </Link>
