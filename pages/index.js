@@ -1,6 +1,6 @@
 import ToolChangeForm from '../components/ToolChangeForm'
 import Link from 'next/link'
-import { BarChart3, Plus, QrCode, Ruler, Flame, Factory } from 'lucide-react'
+import { BarChart3, Plus, QrCode, Ruler, Flame, Factory, LayoutDashboard } from 'lucide-react'
 
 export default function Home() {
   return (
@@ -128,6 +128,18 @@ export default function Home() {
               <div>
                 <h3 className="text-xl font-semibold">Heat Treatment Management</h3>
                 <p className="text-sm text-white/80">Record cycles, view analytics, and monitor furnace utilization.</p>
+              </div>
+            </div>
+          </Link>
+
+          <Link href="/pour-report-dashboard" className="group rounded-2xl bg-gradient-to-br from-spuncast-sky to-spuncast-red p-6 text-white shadow-brand transition-transform hover:-translate-y-1">
+            <div className="flex items-start gap-4">
+              <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-white/15 text-white">
+                <LayoutDashboard size={28} />
+              </div>
+              <div>
+                <h3 className="text-xl font-semibold">Melt &amp; Pour Dashboard</h3>
+                <p className="text-sm text-white/80">Monitor melt performance, pour activity, and production KPIs.</p>
               </div>
             </div>
           </Link>
