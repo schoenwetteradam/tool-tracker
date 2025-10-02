@@ -1,75 +1,111 @@
-import React, { useState, useEffect } from 'react';
-import { TrendingUp, TrendingDown, Activity, DollarSign, Thermometer, Gauge, Calendar, Users } from 'lucide-react';
+import React, { useState, useEffect, useCallback } from 'react';
+import {
+  TrendingUp,
+  TrendingDown,
+  Activity,
+  DollarSign,
+  Thermometer,
+  Gauge,
+  Calendar,
+  Users,
+  ArrowLeft,
+  FileText
+} from 'lucide-react';
 
-const PourReportDashboard = () => {
+const PourReportDashboard = ({ onNavigate = null }) => {
   const [stats, setStats] = useState(null);
   const [monthlyData, setMonthlyData] = useState([]);
   const [shiftPerformance, setShiftPerformance] = useState([]);
   const [recentPours, setRecentPours] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
   const [dateRange, setDateRange] = useState({
     start: new Date(new Date().getFullYear(), 0, 1).toISOString().split('T')[0],
     end: new Date().toISOString().split('T')[0]
   });
 
-  // Replace these with your actual Supabase credentials
-  const supabaseUrl = 'YOUR_SUPABASE_URL';
-  const supabaseKey = 'YOUR_SUPABASE_ANON_KEY';
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  const credentialsAvailable = Boolean(supabaseUrl && supabaseKey);
+  const canNavigate = typeof onNavigate === 'function';
+
+  const fetchDashboardData = useCallback(async () => {
+    if (!credentialsAvailable) {
+      setError('Supabase credentials are missing. Set NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY.');
+      setLoading(false);
+      return;
+    }
+
+    setLoading(true);
+    setError(null);
+
+    try {
+      const headers = {
+        apikey: supabaseKey,
+        Authorization: `Bearer ${supabaseKey}`
+      };
+
+      const fetchJson = async (url) => {
+        const response = await fetch(url, { headers });
+        const contentType = response.headers.get('content-type') || '';
+
+        if (!response.ok) {
+          let errorMessage = `Request failed with status ${response.status}`;
+
+          if (contentType.includes('application/json')) {
+            const body = await response.json();
+            errorMessage = body?.message || body?.error || errorMessage;
+          } else {
+            const text = await response.text();
+            if (text) {
+              errorMessage = text;
+            }
+          }
+
+          throw new Error(errorMessage);
+        }
+
+        if (contentType.includes('application/json')) {
+          return response.json();
+        }
+
+        return [];
+      };
+
+      const shiftUrl = `${supabaseUrl}/rest/v1/rpc/get_shift_performance?start_date=${encodeURIComponent(
+        dateRange.start
+      )}&end_date=${encodeURIComponent(dateRange.end)}`;
+
+      const [statsData, monthlyKpi, shiftData, recentData] = await Promise.all([
+        fetchJson(`${supabaseUrl}/rest/v1/pour_reports_dashboard_stats?select=*`),
+        fetchJson(`${supabaseUrl}/rest/v1/pour_reports_kpi?select=*&order=month.desc`),
+        fetchJson(shiftUrl),
+        fetchJson(`${supabaseUrl}/rest/v1/rpc/get_recent_pours?days=7`)
+      ]);
+
+      setStats(Array.isArray(statsData) ? statsData[0] ?? null : statsData ?? null);
+      setMonthlyData(Array.isArray(monthlyKpi) ? monthlyKpi : []);
+      setShiftPerformance(Array.isArray(shiftData) ? shiftData : []);
+      setRecentPours(Array.isArray(recentData) ? recentData : []);
+    } catch (fetchError) {
+      console.error('Error fetching dashboard data:', fetchError);
+      setError(fetchError.message || 'Failed to fetch dashboard data.');
+      setStats(null);
+      setMonthlyData([]);
+      setShiftPerformance([]);
+      setRecentPours([]);
+    } finally {
+      setLoading(false);
+    }
+  }, [credentialsAvailable, supabaseKey, supabaseUrl, dateRange.start, dateRange.end]);
 
   useEffect(() => {
     fetchDashboardData();
-  }, [dateRange]);
+  }, [fetchDashboardData]);
 
-  const fetchDashboardData = async () => {
-    setLoading(true);
-    try {
-      // Fetch dashboard stats
-      const statsRes = await fetch(`${supabaseUrl}/rest/v1/pour_reports_dashboard_stats?select=*`, {
-        headers: {
-          'apikey': supabaseKey,
-          'Authorization': `Bearer ${supabaseKey}`
-        }
-      });
-      const statsData = await statsRes.json();
-      setStats(statsData[0]);
-
-      // Fetch monthly KPI data
-      const monthlyRes = await fetch(`${supabaseUrl}/rest/v1/pour_reports_kpi?select=*&order=month.desc`, {
-        headers: {
-          'apikey': supabaseKey,
-          'Authorization': `Bearer ${supabaseKey}`
-        }
-      });
-      const monthlyKpi = await monthlyRes.json();
-      setMonthlyData(monthlyKpi);
-
-      // Fetch shift performance using RPC
-      const shiftRes = await fetch(
-        `${supabaseUrl}/rest/v1/rpc/get_shift_performance?start_date=${dateRange.start}&end_date=${dateRange.end}`,
-        {
-          headers: {
-            'apikey': supabaseKey,
-            'Authorization': `Bearer ${supabaseKey}`
-          }
-        }
-      );
-      const shiftData = await shiftRes.json();
-      setShiftPerformance(shiftData);
-
-      // Fetch recent pours
-      const recentRes = await fetch(`${supabaseUrl}/rest/v1/rpc/get_recent_pours?days=7`, {
-        headers: {
-          'apikey': supabaseKey,
-          'Authorization': `Bearer ${supabaseKey}`
-        }
-      });
-      const recentData = await recentRes.json();
-      setRecentPours(recentData);
-
-    } catch (error) {
-      console.error('Error fetching dashboard data:', error);
-    } finally {
-      setLoading(false);
+  const handleNavigate = (destination) => {
+    if (canNavigate) {
+      onNavigate(destination);
     }
   };
 
@@ -116,9 +152,9 @@ const PourReportDashboard = () => {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-screen bg-gray-50">
+      <div className="flex h-screen items-center justify-center bg-gray-50">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <div className="mx-auto mb-4 h-16 w-16 animate-spin rounded-full border-b-2 border-blue-600"></div>
           <p className="text-gray-600">Loading dashboard...</p>
         </div>
       </div>
@@ -129,38 +165,73 @@ const PourReportDashboard = () => {
     <div className="min-h-screen bg-gray-50 p-6">
       <div className="max-w-7xl mx-auto">
         {/* Header */}
-        <div className="mb-8">
-          <h1 className="text-4xl font-bold text-gray-800 mb-2">Pour Report Dashboard</h1>
-          <p className="text-gray-600">Real-time production metrics and performance indicators</p>
+        <div className="mb-8 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+          <div>
+            <h1 className="mb-2 text-4xl font-bold text-gray-800">Pour Report Dashboard</h1>
+            <p className="text-gray-600">Real-time production metrics and performance indicators</p>
+          </div>
+          {canNavigate && (
+            <div className="flex flex-wrap items-center gap-3">
+              <button
+                type="button"
+                onClick={() => handleNavigate('home')}
+                className="flex items-center gap-2 rounded-lg border border-gray-300 px-4 py-2 text-sm font-semibold text-gray-700 transition-colors hover:bg-gray-100"
+              >
+                <ArrowLeft className="h-4 w-4" />
+                Back to Menu
+              </button>
+              <button
+                type="button"
+                onClick={() => handleNavigate('form')}
+                className="flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-blue-700"
+              >
+                <FileText className="h-4 w-4" />
+                Enter New Pour
+              </button>
+            </div>
+          )}
         </div>
 
+        {error && (
+          <div className="mb-6 rounded-lg border border-red-200 bg-red-50 p-4 text-red-700">
+            <p className="font-semibold">Unable to load dashboard data</p>
+            <p className="text-sm">{error}</p>
+          </div>
+        )}
+
         {/* Date Range Filter */}
-        <div className="bg-white rounded-lg shadow p-4 mb-6 flex items-center gap-4">
-          <Calendar className="w-5 h-5 text-gray-600" />
-          <div className="flex items-center gap-4 flex-1">
+        <div className="mb-6 flex items-center gap-4 rounded-lg bg-white p-4 shadow">
+          <Calendar className="h-5 w-5 text-gray-600" />
+          <div className="flex flex-1 flex-col gap-4 sm:flex-row sm:items-end">
             <div>
-              <label className="block text-sm text-gray-600 mb-1">Start Date</label>
+              <label className="mb-1 block text-sm text-gray-600">Start Date</label>
               <input
                 type="date"
                 value={dateRange.start}
                 onChange={(e) => setDateRange(prev => ({ ...prev, start: e.target.value }))}
-                className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className="w-full rounded-lg border border-gray-300 px-3 py-2 focus:border-transparent focus:ring-2 focus:ring-blue-500"
               />
             </div>
             <div>
-              <label className="block text-sm text-gray-600 mb-1">End Date</label>
+              <label className="mb-1 block text-sm text-gray-600">End Date</label>
               <input
                 type="date"
                 value={dateRange.end}
                 onChange={(e) => setDateRange(prev => ({ ...prev, end: e.target.value }))}
-                className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className="w-full rounded-lg border border-gray-300 px-3 py-2 focus:border-transparent focus:ring-2 focus:ring-blue-500"
               />
             </div>
             <button
+              type="button"
               onClick={fetchDashboardData}
-              className="mt-6 px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+              disabled={loading || !credentialsAvailable}
+              className={`mt-2 rounded-lg px-6 py-2 text-white transition-colors sm:mt-0 ${
+                loading || !credentialsAvailable
+                  ? 'cursor-not-allowed bg-blue-300'
+                  : 'bg-blue-600 hover:bg-blue-700'
+              }`}
             >
-              Refresh
+              {loading ? 'Refreshing...' : 'Refresh'}
             </button>
           </div>
         </div>
