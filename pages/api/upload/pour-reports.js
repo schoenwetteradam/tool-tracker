@@ -8,6 +8,50 @@ export const config = {
   },
 }
 
+const cleanTimeFormat = (timeStr) => {
+  if (timeStr === undefined || timeStr === null) return null
+
+  const str = String(timeStr).trim()
+  if (str === '' || str === '0') return null
+
+  // Handle invalid formats like "15:50 AM"
+
+  // If it has AM/PM, parse and convert to 24-hour
+  if (/AM|PM/i.test(str)) {
+    const match = str.match(/(\d{1,2}):(\d{2})\s*(AM|PM)/i)
+    if (!match) return null
+
+    let [, hours, minutes, period] = match
+    hours = parseInt(hours, 10)
+    minutes = parseInt(minutes, 10)
+
+    if (period.toUpperCase() === 'PM' && hours !== 12) {
+      hours += 12
+    } else if (period.toUpperCase() === 'AM' && hours === 12) {
+      hours = 0
+    }
+
+    if (hours >= 24 || hours < 0 || minutes >= 60 || minutes < 0) {
+      return null
+    }
+
+    return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:00`
+  }
+
+  const match = str.match(/(\d{1,2}):(\d{2})/)
+  if (!match) return null
+
+  const [, hours, minutes] = match
+  const h = parseInt(hours, 10)
+  const m = parseInt(minutes, 10)
+
+  if (h >= 24 || h < 0 || m >= 60 || m < 0) {
+    return null
+  }
+
+  return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:00`
+}
+
 const parseDate = (dateStr) => {
   if (!dateStr) return null
 
@@ -56,8 +100,8 @@ const transformPourReportRow = (row) => {
     power_percent: parseNumber(row.power_percent),
     new_lining: (row.new_lining || '').toUpperCase() === 'Y',
     ladle_number: parseInteger(row.ladle_number),
-    start_time: row.start_time || null,
-    tap_time: row.tap_time || null,
+    start_time: cleanTimeFormat(row.start_time),
+    tap_time: cleanTimeFormat(row.tap_time),
     tap_temp: parseInteger(row.tap_temp),
     pour_temperature: parseInteger(row.pour_tempurature || row.pour_temperature),
     liquid_canon: parseNumber(row.liquid_canon),
