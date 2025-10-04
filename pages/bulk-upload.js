@@ -1,5 +1,5 @@
 import React, { useState } from 'react'
-import { supabase } from '../lib/supabase'
+import { supabase } from '../lib/supabase.js'
 import { Upload, CheckCircle, AlertCircle, FileText, Loader } from 'lucide-react'
 
 export default function BulkUpload() {

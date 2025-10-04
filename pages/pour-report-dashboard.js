@@ -1,5 +1,5 @@
 import Head from 'next/head'
-import PourReportDashboard from '../components/PourReportDashboard'
+import PourReportDashboard from '../components/PourReportDashboard.jsx'
 
 const PourReportDashboardPage = () => {
   return (

@@ -2,11 +2,12 @@
   "name": "tool-tracker",
   "version": "1.0.0",
   "description": "Tool change tracking system using Next.js and Supabase",
+  "type": "module",
   "scripts": {
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "test": "echo \"No tests specified\" && exit 0"
+    "test": "node --test"
   },
   "dependencies": {
     "@headlessui/react": "^1.7.17",

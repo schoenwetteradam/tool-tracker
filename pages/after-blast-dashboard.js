@@ -11,7 +11,7 @@ import {
   RefreshCw,
   Ruler
 } from 'lucide-react'
-import { getAfterBlastMeasurements } from '../lib/supabase'
+import { getAfterBlastMeasurements } from '../lib/supabase.js'
 
 const statusThemes = {
   PASS: {

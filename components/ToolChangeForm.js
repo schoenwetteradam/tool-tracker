@@ -15,7 +15,7 @@ import {
   Package2,
   Truck
 } from 'lucide-react';
-import { addToolChange, getOperators } from '../lib/supabase';
+import { addToolChange, getOperators } from '../lib/supabase.js';
 
 const normalizeOperatorOption = (operator) => {
   if (!operator) return null;

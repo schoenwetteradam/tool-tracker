@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import Head from 'next/head'
 import Link from 'next/link'
 import { ArrowLeft, List, Search } from 'lucide-react'
-import { formatDate, formatLoadType } from '../../lib/heatTreatmentUtils'
+import { formatDate, formatLoadType } from '../../lib/heatTreatmentUtils.js'
 
 export default function HeatTreatmentList() {
   const [treatments, setTreatments] = useState([])

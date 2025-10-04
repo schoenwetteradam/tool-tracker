@@ -6,7 +6,7 @@ import {
   getEquipment,
   getInsertUsageAnalytics,
   getToolCostAnalysis
-} from '../lib/supabase'
+} from '../lib/supabase.js'
 import {
   LineChart,
   Line,

@@ -1,7 +1,7 @@
 import { useRouter } from 'next/router'
 import Head from 'next/head'
 import Link from 'next/link'
-import HeatTreatmentForm from '../../components/HeatTreatmentForm'
+import HeatTreatmentForm from '../../components/HeatTreatmentForm.js'
 import { ArrowLeft, Flame } from 'lucide-react'
 
 export default function NewHeatTreatment() {
