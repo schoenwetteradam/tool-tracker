@@ -94,19 +94,43 @@ export default async function handler(req, res) {
       })
     }
 
+    const cleanedData = rawData
+      .map((row, index) => ({ row, originalIndex: index }))
+      .filter(
+        ({ row }) =>
+          row?.heat_number && row?.date && row?.full_heat_number && row.full_heat_number !== '-'
+      )
+      .map(({ row, originalIndex }) => {
+        const trimmed = { ...row }
+
+        if (typeof trimmed.heat_number === 'string') {
+          trimmed.heat_number = trimmed.heat_number.trim()
+        }
+
+        if (typeof trimmed.full_heat_number === 'string') {
+          trimmed.full_heat_number = trimmed.full_heat_number.trim()
+        }
+
+        if (typeof trimmed.grade_name === 'string') {
+          trimmed.grade_name = trimmed.grade_name.trim()
+        }
+
+        return { row: trimmed, originalIndex }
+      })
+
     const transformedData = []
     const rowErrors = []
 
-    rawData.forEach((row, index) => {
+    cleanedData.forEach(({ row, originalIndex }) => {
       try {
         const transformed = transformPourReportRow(row)
         if (transformed.heat_number) {
           transformedData.push(transformed)
         } else {
-          rowErrors.push(`Row ${index + 1}: Missing heat_number`)
+          rowErrors.push(`Row ${originalIndex + 1}: Missing heat_number`)
         }
       } catch (error) {
-        rowErrors.push(`Row ${index + 1}: ${error.message}`)
+        rowErrors.push(`Row ${originalIndex + 1}: ${error.message}`)
       }
     })
 

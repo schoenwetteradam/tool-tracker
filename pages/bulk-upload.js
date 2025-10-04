@@ -144,15 +144,39 @@ export default function BulkUpload() {
       const text = await file.text()
       const rawData = parseCSV(text)
 
-      setProgress({ current: 0, total: rawData.length })
+      const cleanedData = rawData
+        .map((row, index) => ({ row, originalIndex: index }))
+        .filter(
+          ({ row }) =>
+            row?.heat_number && row?.date && row?.full_heat_number && row.full_heat_number !== '-'
+        )
+        .map(({ row, originalIndex }) => {
+          const trimmed = { ...row }
+
+          if (typeof trimmed.heat_number === 'string') {
+            trimmed.heat_number = trimmed.heat_number.trim()
+          }
+
+          if (typeof trimmed.full_heat_number === 'string') {
+            trimmed.full_heat_number = trimmed.full_heat_number.trim()
+          }
+
+          if (typeof trimmed.grade_name === 'string') {
+            trimmed.grade_name = trimmed.grade_name.trim()
+          }
+
+          return { row: trimmed, originalIndex }
+        })
+
+      setProgress({ current: 0, total: cleanedData.length })
 
       const rowErrors = []
-      const transformedData = rawData
-        .map((row, index) => {
+      const transformedData = cleanedData
+        .map(({ row, originalIndex }) => {
           try {
             return transformPourReportRow(row)
           } catch (error) {
-            rowErrors.push(`Row ${index + 2}: ${error.message}`)
+            rowErrors.push(`Row ${originalIndex + 2}: ${error.message}`)
             return null
           }
         })
