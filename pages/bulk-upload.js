@@ -1,5 +1,4 @@
 import React, { useState } from 'react'
-import { supabase } from '../lib/supabase.js'
 import { Upload, CheckCircle, AlertCircle, FileText, Loader } from 'lucide-react'
 
 export default function BulkUpload() {
@@ -57,119 +56,6 @@ export default function BulkUpload() {
     return data
   }
 
-  const cleanTimeFormat = (timeStr) => {
-    if (timeStr === undefined || timeStr === null) return null
-
-    const str = String(timeStr).trim()
-    if (str === '' || str === '0') return null
-
-    if (/AM|PM/i.test(str)) {
-      const match = str.match(/(\d{1,2}):(\d{2})\s*(AM|PM)/i)
-      if (!match) return null
-
-      let [, hours, minutes, period] = match
-      hours = parseInt(hours, 10)
-      minutes = parseInt(minutes, 10)
-
-      if (period.toUpperCase() === 'PM' && hours !== 12) {
-        hours += 12
-      } else if (period.toUpperCase() === 'AM' && hours === 12) {
-        hours = 0
-      }
-
-      if (hours >= 24 || hours < 0 || minutes >= 60 || minutes < 0) {
-        return null
-      }
-
-      return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:00`
-    }
-
-    const match = str.match(/(\d{1,2}):(\d{2})/)
-    if (!match) return null
-
-    const [, hours, minutes] = match
-    const h = parseInt(hours, 10)
-    const m = parseInt(minutes, 10)
-
-    if (h >= 24 || h < 0 || m >= 60 || m < 0) {
-      return null
-    }
-
-    return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:00`
-  }
-
-  const parseDate = (dateStr) => {
-    if (!dateStr) return null
-
-    const parts = dateStr.split('/')
-    if (parts.length === 3) {
-      const month = parts[0].padStart(2, '0')
-      const day = parts[1].padStart(2, '0')
-      let year = parts[2]
-
-      if (year.length === 2) {
-        year = parseInt(year, 10) > 50 ? '19' + year : '20' + year
-      }
-
-      return `${year}-${month}-${day}`
-    }
-
-    return null
-  }
-
-  const parseNumber = (val) => {
-    if (!val || val === '0' || val === '') return null
-    const num = parseFloat(val)
-    return Number.isNaN(num) ? null : num
-  }
-
-  const parseInteger = (val) => {
-    if (!val || val === '0' || val === '') return null
-    const num = parseInt(val, 10)
-    return Number.isNaN(num) ? null : num
-  }
-
-  const transformPourReportRow = (row) => {
-    return {
-      heat_number: row.heat_number || null,
-      pour_date: parseDate(row.date),
-      grade_name: row.grade_name || null,
-      stock_code: row.stock_code || null,
-      job_number: parseInteger(row.job_number),
-      cast_weight: parseNumber(row.cast_weight),
-      cmop: parseInteger(row.cmop),
-      dash_number: row.dash_number || null,
-      die_number: parseInteger(row.die_number),
-      shift: parseInteger(row.shift),
-      melter_id: parseInteger(row.melter || row.melter_id),
-      furnace_number: parseInteger(row.furnace_number),
-      power_percent: parseNumber(row.power_percent),
-      new_lining: (row.new_lining || '').toUpperCase() === 'Y',
-      ladle_number: parseInteger(row.ladle_number),
-      start_time: cleanTimeFormat(row.start_time),
-      tap_time: cleanTimeFormat(row.tap_time),
-      tap_temp: parseInteger(row.tap_temp),
-      pour_temperature: parseInteger(row.pour_tempurature || row.pour_temperature),
-      liquid_canon: parseNumber(row.liquid_canon),
-      canon_psi: parseNumber(row.canon_psi),
-      bath_weight_carried_in: parseNumber(row.bath_weight_carried_in),
-      rice_hulls_amount: parseNumber(row.rice_hulls_amount),
-      liquid_amount: parseNumber(row.liquid_amount),
-      liquid_type: row.liquid_type || null,
-      wash_thickness: parseNumber(row.wash_thickness),
-      wash_pass: parseInteger(row.wash_pass),
-      pour_time_seconds: parseInteger(row.pour_time_seconds),
-      wash_type: row.wash_type || null,
-      die_temp_before_pour: parseInteger(row.die_temp_before_pour),
-      die_rpm: parseInteger(row.die_rpm),
-      baume: parseNumber(row.Baume || row.baume),
-      spin_time_minutes: parseInteger(row.spin_time_minutes),
-      cost_per_pound: parseNumber(row.cost_per_pound),
-      full_heat_number: row.full_heat_number || null,
-      comments: row.Comments || row.comments || null,
-    }
-  }
-
   const handleUpload = async () => {
     if (!file) {
       alert('Please select a file first')
@@ -184,98 +70,67 @@ export default function BulkUpload() {
     try {
       const text = await file.text()
       const rawData = parseCSV(text)
-
-      const cleanedData = rawData
-        .map((row, index) => ({ row, originalIndex: index }))
-        .filter(
-          ({ row }) =>
-            row?.heat_number && row?.date && row?.full_heat_number && row.full_heat_number !== '-'
-        )
-        .map(({ row, originalIndex }) => {
-          const trimmed = { ...row }
-
-          if (typeof trimmed.heat_number === 'string') {
-            trimmed.heat_number = trimmed.heat_number.trim()
-          }
-
-          if (typeof trimmed.full_heat_number === 'string') {
-            trimmed.full_heat_number = trimmed.full_heat_number.trim()
-          }
-
-          if (typeof trimmed.grade_name === 'string') {
-            trimmed.grade_name = trimmed.grade_name.trim()
-          }
-
-          return { row: trimmed, originalIndex }
-        })
-
-      setProgress({ current: 0, total: cleanedData.length })
-
-      const rowErrors = []
-      const transformedData = cleanedData
-        .map(({ row, originalIndex }) => {
-          try {
-            return transformPourReportRow(row)
-          } catch (error) {
-            rowErrors.push(`Row ${originalIndex + 2}: ${error.message}`)
-            return null
-          }
-        })
-        .filter((row) => row !== null && row.heat_number)
-
-      let successCount = 0
-      let failCount = 0
-      const batchErrors = []
-      const batchSize = 500
-
-      for (let i = 0; i < transformedData.length; i += batchSize) {
-        const batch = transformedData.slice(i, i + batchSize)
-
-        try {
-          const { error } = await supabase
-            .from('pour_reports')
-            .upsert(batch, {
-              onConflict: 'full_heat_number',
-              ignoreDuplicates: false,
-            })
-            .select()
-
-          if (error) {
-            console.error('Batch error:', error)
-            batchErrors.push(`Batch ${Math.floor(i / batchSize) + 1}: ${error.message}`)
-            failCount += batch.length
-          } else {
-            successCount += batch.length
-          }
-        } catch (error) {
-          console.error('Batch exception:', error)
-          batchErrors.push(`Batch ${Math.floor(i / batchSize) + 1}: ${error.message}`)
-          failCount += batch.length
-        }
-
-        setProgress({ current: i + batch.length, total: transformedData.length })
+      if (rawData.length === 0) {
+        setErrors(['The selected file does not contain any rows.'])
+        return
       }
 
-      if (successCount > 0) {
-        try {
-          await supabase.rpc('refresh_all_kpis', {
-            p_start_date: '2024-01-01',
-            p_end_date: new Date().toISOString().split('T')[0],
-          })
-        } catch (refreshErr) {
-          console.warn('KPI refresh failed:', refreshErr)
-        }
-      }
+      const importableRows = rawData.filter((row) => {
+        const heatNumber = row?.heat_number
+        const date = row?.date
+        const fullHeatNumber = row?.full_heat_number
 
-      setResults({
-        total: rawData.length,
-        success: successCount,
-        failed: failCount,
-        skipped: rawData.length - transformedData.length,
+        const hasValue = (value) => {
+          if (value === undefined || value === null) return false
+          const normalized = String(value).trim()
+          return normalized !== '' && normalized !== '-'
+        }
+
+        return hasValue(heatNumber) && hasValue(date) && hasValue(fullHeatNumber)
       })
 
-      if (rowErrors.length > 0 || batchErrors.length > 0) {
-        setErrors([...rowErrors, ...batchErrors])
+      if (importableRows.length === 0) {
+        setErrors(['No rows with heat_number, date, and full_heat_number were found.'])
+        return
+      }
+
+      setProgress({ current: 0, total: importableRows.length })
+
+      const response = await fetch('/api/upload/pour-reports', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ data: rawData, skipDuplicates: true }),
+      })
+
+      const responseBody = await response.json().catch(() => ({}))
+
+      if (!response.ok) {
+        const message = responseBody?.error || 'Failed to import pour report data.'
+        const responseErrors = Array.isArray(responseBody?.errors) && responseBody.errors.length > 0
+          ? responseBody.errors
+          : [message]
+
+        setErrors(responseErrors)
+        return
+      }
+
+      setProgress({ current: importableRows.length, total: importableRows.length })
+
+      const resultsPayload = responseBody?.results || {}
+
+      setResults({
+        total: resultsPayload.total ?? rawData.length,
+        success: resultsPayload.imported ?? 0,
+        failed: resultsPayload.failed ?? 0,
+        skipped: resultsPayload.skipped ?? 0,
+        skippedInvalid: resultsPayload.skippedInvalid ?? 0,
+        skippedDuplicates: resultsPayload.skippedDuplicates ?? 0,
+      })
+
+      if (Array.isArray(responseBody?.errors) && responseBody.errors.length > 0) {
+        setErrors(responseBody.errors)
       }
     } catch (error) {
       console.error('Upload error:', error)
@@ -423,6 +278,29 @@ export default function BulkUpload() {
                 <p className="text-3xl font-bold text-yellow-600">{results.skipped}</p>
               </div>
             </div>
+
+            {(results.skippedInvalid > 0 || results.skippedDuplicates > 0) && (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                {results.skippedInvalid > 0 && (
+                  <div className="bg-yellow-50 p-4 rounded-lg">
+                    <p className="text-sm text-yellow-700 font-semibold mb-1">Skipped - Invalid Rows</p>
+                    <p className="text-2xl font-bold text-yellow-700">{results.skippedInvalid}</p>
+                    <p className="text-xs text-yellow-700 mt-2">
+                      Rows missing heat number, date, or full heat number were ignored.
+                    </p>
+                  </div>
+                )}
+                {results.skippedDuplicates > 0 && (
+                  <div className="bg-blue-50 p-4 rounded-lg">
+                    <p className="text-sm text-blue-700 font-semibold mb-1">Skipped - Duplicates</p>
+                    <p className="text-2xl font-bold text-blue-700">{results.skippedDuplicates}</p>
+                    <p className="text-xs text-blue-700 mt-2">
+                      Duplicate full heat numbers already in the import were skipped.
+                    </p>
+                  </div>
+                )}
+              </div>
+            )}
 
             {errors.length > 0 && (
               <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-6">
