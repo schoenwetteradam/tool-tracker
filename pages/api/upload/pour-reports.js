@@ -169,7 +169,7 @@ export default async function handler(req, res) {
       try {
         const transformed = transformPourReportRow(row)
         if (transformed.heat_number) {
-          transformedData.push(transformed)
+          transformedData.push({ record: transformed, originalIndex })
         } else {
           rowErrors.push(`Row ${originalIndex + 1}: Missing heat_number`)
         }
@@ -185,13 +185,53 @@ export default async function handler(req, res) {
       })
     }
 
+    const dedupedMap = new Map()
+    const duplicateEntries = []
+
+    transformedData.forEach(({ record, originalIndex }) => {
+      const key = record.full_heat_number
+      if (key) {
+        if (dedupedMap.has(key)) {
+          duplicateEntries.push({
+            key,
+            previousIndex: dedupedMap.get(key).originalIndex,
+            duplicateIndex: originalIndex,
+          })
+        }
+        dedupedMap.set(key, { record, originalIndex })
+      } else {
+        dedupedMap.set(`no_key_${originalIndex}`, { record, originalIndex })
+      }
+    })
+
+    if (duplicateEntries.length > 0) {
+      duplicateEntries.forEach(({ key, previousIndex, duplicateIndex }) => {
+        console.warn(
+          `Duplicate full_heat_number ${key} encountered. Replacing row ${
+            (previousIndex ?? duplicateIndex) + 1
+          } with row ${duplicateIndex + 1}.`
+        )
+      })
+    }
+
+    const uniqueRecords = Array.from(dedupedMap.values())
+      .sort((a, b) => a.originalIndex - b.originalIndex)
+      .map(({ record }) => record)
+
+    if (uniqueRecords.length === 0) {
+      return res.status(400).json({
+        error: 'No unique records to import after deduplication',
+        errors: rowErrors,
+      })
+    }
+
     const batchSize = 500
     let successCount = 0
     let failCount = 0
     const batchErrors = []
 
-    for (let i = 0; i < transformedData.length; i += batchSize) {
-      const batch = transformedData.slice(i, i + batchSize)
+    for (let i = 0; i < uniqueRecords.length; i += batchSize) {
+      const batch = uniqueRecords.slice(i, i + batchSize)
 
       try {
         const { error } = await supabase
@@ -214,6 +254,11 @@ export default async function handler(req, res) {
       }
     }
 
+    const validCount = transformedData.length
+    const duplicatesSkipped = validCount - uniqueRecords.length
+    const invalidCount = rawData.length - validCount
+    const totalSkipped = invalidCount + duplicatesSkipped
+
     if (successCount > 0) {
       try {
         await supabase.rpc('refresh_all_kpis', {
@@ -231,7 +276,9 @@ export default async function handler(req, res) {
         total: rawData.length,
         imported: successCount,
         failed: failCount,
-        skipped: rawData.length - transformedData.length,
+        skipped: totalSkipped,
+        skippedInvalid: invalidCount,
+        skippedDuplicates: duplicatesSkipped,
       },
       errors: [...rowErrors, ...batchErrors],
     })
