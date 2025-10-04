@@ -1,4 +1,4 @@
-import { supabase } from '../../../lib/supabase'
+import { supabase } from '../../../lib/supabase.js'
 
 export const config = {
   api: {
@@ -24,6 +24,10 @@ const cleanTimeFormat = (timeStr) => {
     let [, hours, minutes, period] = match
     hours = parseInt(hours, 10)
     minutes = parseInt(minutes, 10)
+
+    if (hours < 1 || hours > 12) {
+      return null
+    }
 
     if (period.toUpperCase() === 'PM' && hours !== 12) {
       hours += 12

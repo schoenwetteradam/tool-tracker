@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import Head from 'next/head'
-import { supabase } from '../lib/supabase'
+import { supabase } from '../lib/supabase.js'
 
 const statusStyles = {
   NONE: {

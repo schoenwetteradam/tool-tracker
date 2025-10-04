@@ -1,5 +1,5 @@
 import Head from 'next/head'
-import PourReportForm from '../components/PourReportForm'
+import PourReportForm from '../components/PourReportForm.js'
 
 const PourReportPage = () => {
   return (

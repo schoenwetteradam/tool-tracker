@@ -1,6 +1,6 @@
 import { useCallback, useMemo, useState } from 'react'
 import { AlertCircle, CheckCircle2, RefreshCw, Save } from 'lucide-react'
-import { PourReportService, buildPourReportEstimate } from '../lib/pourReportService'
+import { PourReportService, buildPourReportEstimate } from '../lib/pourReportService.js'
 
 const getDefaultFormData = () => ({
   heat_number: '',

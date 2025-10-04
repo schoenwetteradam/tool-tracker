@@ -1,4 +1,4 @@
-import ToolChangeForm from '../components/ToolChangeForm'
+import ToolChangeForm from '../components/ToolChangeForm.js'
 import Link from 'next/link'
 import { BarChart3, Plus, QrCode, Ruler, Flame, Factory, LayoutDashboard, Upload } from 'lucide-react'
 

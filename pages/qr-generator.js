@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import Head from 'next/head'
 import Link from 'next/link'
-import { supabase } from '../lib/supabase'
+import { supabase } from '../lib/supabase.js'
 
 const QR_TYPE_LABELS = {
   measurement: 'Measurement App',
