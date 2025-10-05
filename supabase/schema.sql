@@ -346,6 +346,223 @@ CREATE INDEX IF NOT EXISTS idx_dimensional_measurements_date ON dimensional_meas
 CREATE INDEX IF NOT EXISTS idx_dimensional_measurements_product ON dimensional_measurements(product_number);
 
 -- ===============
+-- POUR REPORTS & ANALYTICS
+-- ===============
+CREATE TABLE IF NOT EXISTS pour_reports (
+  id BIGSERIAL PRIMARY KEY,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW(),
+  heat_number TEXT NOT NULL,
+  pour_date DATE,
+  grade_name TEXT,
+  stock_code TEXT,
+  job_number INTEGER,
+  cast_weight NUMERIC(12,3),
+  cmop INTEGER,
+  dash_number TEXT,
+  die_number INTEGER,
+  shift INTEGER,
+  melter_id INTEGER,
+  furnace_number INTEGER,
+  power_percent NUMERIC(6,2),
+  new_lining BOOLEAN DEFAULT FALSE,
+  ladle_number INTEGER,
+  start_time TIME,
+  tap_time TIME,
+  tap_temp INTEGER,
+  pour_temperature INTEGER,
+  liquid_canon NUMERIC(12,3),
+  canon_psi NUMERIC(12,3),
+  bath_weight_carried_in NUMERIC(12,3),
+  rice_hulls_amount NUMERIC(12,3),
+  liquid_amount NUMERIC(12,3),
+  liquid_type TEXT,
+  wash_thickness NUMERIC(6,3),
+  wash_pass INTEGER,
+  pour_time_seconds INTEGER,
+  wash_type TEXT,
+  die_temp_before_pour INTEGER,
+  die_rpm INTEGER,
+  baume NUMERIC(6,3),
+  spin_time_minutes INTEGER,
+  cost_per_pound NUMERIC(10,4),
+  full_heat_number TEXT,
+  comments TEXT
+);
+
+CREATE INDEX IF NOT EXISTS idx_pour_reports_pour_date ON pour_reports(pour_date DESC);
+CREATE INDEX IF NOT EXISTS idx_pour_reports_heat_number ON pour_reports(heat_number);
+CREATE INDEX IF NOT EXISTS idx_pour_reports_full_heat_number ON pour_reports(full_heat_number);
+CREATE INDEX IF NOT EXISTS idx_pour_reports_grade ON pour_reports(grade_name);
+
+CREATE OR REPLACE VIEW daily_production_summary AS
+SELECT
+  pour_date,
+  COUNT(*) AS total_pours,
+  SUM(cast_weight) AS total_weight,
+  AVG(cast_weight) AS avg_cast_weight,
+  AVG(pour_temperature) AS avg_pour_temp,
+  AVG(cost_per_pound) AS avg_cost_per_pound
+FROM pour_reports
+WHERE pour_date IS NOT NULL
+GROUP BY pour_date;
+
+CREATE OR REPLACE VIEW temperature_control_by_grade AS
+SELECT
+  pour_date AS day,
+  grade_name,
+  AVG(pour_temperature) AS avg_temp,
+  COALESCE(STDDEV_POP(pour_temperature), 0) AS temp_stddev,
+  MIN(pour_temperature) AS min_temp,
+  MAX(pour_temperature) AS max_temp,
+  COUNT(*) AS sample_size
+FROM pour_reports
+WHERE pour_date IS NOT NULL
+  AND grade_name IS NOT NULL
+  AND pour_temperature IS NOT NULL
+GROUP BY pour_date, grade_name;
+
+CREATE OR REPLACE VIEW shift_performance AS
+SELECT
+  shift,
+  COUNT(*) AS total_pours,
+  SUM(cast_weight) AS total_weight,
+  AVG(pour_temperature) AS avg_pour_temp,
+  AVG(
+    CASE
+      WHEN pour_time_seconds IS NULL OR pour_time_seconds = 0 THEN NULL
+      ELSE cast_weight / (pour_time_seconds / 60.0)
+    END
+  ) AS avg_efficiency
+FROM pour_reports
+WHERE shift IS NOT NULL
+GROUP BY shift;
+
+CREATE OR REPLACE VIEW furnace_utilization AS
+SELECT
+  furnace_number,
+  COUNT(*) AS total_pours,
+  SUM(cast_weight) AS total_weight,
+  AVG(pour_temperature) AS avg_pour_temp,
+  AVG(cost_per_pound) AS avg_cost_per_pound
+FROM pour_reports
+WHERE furnace_number IS NOT NULL
+GROUP BY furnace_number;
+
+DROP TABLE IF EXISTS pour_reports_dashboard_stats;
+DROP MATERIALIZED VIEW IF EXISTS pour_reports_dashboard_stats;
+DROP VIEW IF EXISTS pour_reports_dashboard_stats;
+
+CREATE OR REPLACE VIEW pour_reports_dashboard_stats AS
+WITH year_stats AS (
+  SELECT
+    COUNT(*) AS total_pours,
+    SUM(cast_weight) AS total_weight,
+    SUM(COALESCE(cast_weight, 0) * COALESCE(cost_per_pound, 0)) AS total_cost,
+    AVG(cast_weight) AS avg_weight
+  FROM pour_reports
+  WHERE pour_date >= DATE_TRUNC('year', CURRENT_DATE)
+), month_stats AS (
+  SELECT
+    COUNT(*) AS total_pours,
+    SUM(cast_weight) AS total_weight
+  FROM pour_reports
+  WHERE pour_date >= DATE_TRUNC('month', CURRENT_DATE)
+), temp_stats AS (
+  SELECT
+    AVG(pour_temperature) AS avg_temp,
+    STDDEV_POP(pour_temperature) AS stddev_temp
+  FROM pour_reports
+  WHERE pour_date >= DATE_TRUNC('year', CURRENT_DATE)
+)
+SELECT
+  COALESCE(year_stats.total_pours, 0) AS total_pours_ytd,
+  COALESCE(month_stats.total_pours, 0) AS current_month_pours,
+  COALESCE(year_stats.total_weight, 0) AS total_weight_ytd,
+  COALESCE(month_stats.total_weight, 0) AS current_month_weight,
+  COALESCE(temp_stats.avg_temp, 0) AS avg_pour_temp,
+  COALESCE(temp_stats.stddev_temp, 0) AS stddev_pour_temp,
+  COALESCE(year_stats.total_cost, 0) AS total_cost_ytd,
+  COALESCE(year_stats.avg_weight, 0) AS avg_weight_per_pour_ytd
+FROM year_stats, month_stats, temp_stats;
+
+DROP TABLE IF EXISTS pour_reports_kpi;
+DROP MATERIALIZED VIEW IF EXISTS pour_reports_kpi;
+DROP VIEW IF EXISTS pour_reports_kpi;
+
+CREATE OR REPLACE VIEW pour_reports_kpi AS
+SELECT
+  DATE_TRUNC('month', pour_date)::DATE AS month,
+  COUNT(*) AS total_pours,
+  SUM(cast_weight) AS total_weight,
+  AVG(pour_temperature) AS avg_pour_temp,
+  SUM(COALESCE(cast_weight, 0) * COALESCE(cost_per_pound, 0)) AS total_cost,
+  COUNT(DISTINCT grade_name) AS unique_grades
+FROM pour_reports
+WHERE pour_date IS NOT NULL
+GROUP BY DATE_TRUNC('month', pour_date);
+
+CREATE OR REPLACE FUNCTION get_recent_pours(days INTEGER DEFAULT 7)
+RETURNS TABLE (
+  heat_number TEXT,
+  pour_date DATE,
+  grade_name TEXT,
+  cast_weight NUMERIC,
+  shift INTEGER,
+  cost_per_pound NUMERIC,
+  pour_temperature INTEGER,
+  die_rpm INTEGER
+) AS $$
+  SELECT
+    pr.heat_number,
+    pr.pour_date,
+    pr.grade_name,
+    pr.cast_weight,
+    pr.shift,
+    pr.cost_per_pound,
+    pr.pour_temperature,
+    pr.die_rpm
+  FROM pour_reports pr
+  WHERE pr.pour_date >= (CURRENT_DATE - COALESCE(days, 7))
+  ORDER BY pr.pour_date DESC, pr.created_at DESC
+$$ LANGUAGE sql STABLE;
+
+CREATE OR REPLACE FUNCTION get_shift_performance(start_date DATE, end_date DATE)
+RETURNS TABLE (
+  shift INTEGER,
+  total_pours BIGINT,
+  total_weight NUMERIC,
+  avg_pour_temp NUMERIC,
+  avg_efficiency NUMERIC
+) AS $$
+  SELECT
+    pr.shift,
+    COUNT(*) AS total_pours,
+    SUM(pr.cast_weight) AS total_weight,
+    AVG(pr.pour_temperature) AS avg_pour_temp,
+    AVG(
+      CASE
+        WHEN pr.pour_time_seconds IS NULL OR pr.pour_time_seconds = 0 THEN NULL
+        ELSE pr.cast_weight / (pr.pour_time_seconds / 60.0)
+      END
+    ) AS avg_efficiency
+  FROM pour_reports pr
+  WHERE pr.shift IS NOT NULL
+    AND (start_date IS NULL OR pr.pour_date >= start_date)
+    AND (end_date IS NULL OR pr.pour_date <= end_date)
+  GROUP BY pr.shift
+  ORDER BY pr.shift
+$$ LANGUAGE sql STABLE;
+
+CREATE OR REPLACE FUNCTION refresh_dashboard_stats()
+RETURNS void AS $$
+BEGIN
+  -- Views are recalculated on demand; this function exists for API compatibility.
+  RETURN;
+END;
+$$ LANGUAGE plpgsql;
+
+-- ===============
 -- ROLE PRIVILEGES
 -- ===============
 GRANT USAGE ON SCHEMA public TO tool_tracker_public;
@@ -378,6 +595,7 @@ ALTER TABLE tool_changes ENABLE ROW LEVEL SECURITY;
 ALTER TABLE tool_change_costs ENABLE ROW LEVEL SECURITY;
 ALTER TABLE measurement_templates ENABLE ROW LEVEL SECURITY;
 ALTER TABLE dimensional_measurements ENABLE ROW LEVEL SECURITY;
+ALTER TABLE pour_reports ENABLE ROW LEVEL SECURITY;
 
 -- Generic policies allowing authenticated users to read data
 CREATE POLICY IF NOT EXISTS "Allow public access to operators" ON operators
@@ -396,6 +614,9 @@ CREATE POLICY IF NOT EXISTS "Allow public access to tool_changes" ON tool_change
   FOR SELECT USING (auth.role() IN ('anon', 'authenticated', 'service_role'));
 
 CREATE POLICY IF NOT EXISTS "Allow public access to tool_change_costs" ON tool_change_costs
+  FOR SELECT USING (auth.role() IN ('anon', 'authenticated', 'service_role'));
+
+CREATE POLICY IF NOT EXISTS "Allow public access to pour_reports" ON pour_reports
   FOR SELECT USING (auth.role() IN ('anon', 'authenticated', 'service_role'));
 
 CREATE POLICY IF NOT EXISTS "Allow public access to measurement_templates" ON measurement_templates
@@ -477,5 +698,15 @@ CREATE POLICY IF NOT EXISTS "Allow service role updates on dimensional_measureme
 
 CREATE POLICY IF NOT EXISTS "Allow service role deletes on dimensional_measurements" ON dimensional_measurements
   FOR DELETE USING (auth.role() = 'service_role');
+
+CREATE POLICY IF NOT EXISTS "Allow inserts on pour_reports" ON pour_reports
+  FOR INSERT WITH CHECK (auth.role() IN ('anon', 'authenticated', 'service_role'));
+
+CREATE POLICY IF NOT EXISTS "Allow updates on pour_reports" ON pour_reports
+  FOR UPDATE USING (auth.role() IN ('anon', 'authenticated', 'service_role'))
+  WITH CHECK (auth.role() IN ('anon', 'authenticated', 'service_role'));
+
+CREATE POLICY IF NOT EXISTS "Allow deletes on pour_reports" ON pour_reports
+  FOR DELETE USING (auth.role() IN ('anon', 'authenticated', 'service_role'));
 
 -- Optional update policies for additional roles can be added separately.
