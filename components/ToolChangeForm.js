@@ -15,7 +15,7 @@ import {
   Package2,
   Truck
 } from 'lucide-react';
-import { addToolChange, getOperators } from '../lib/supabase.js';
+import { submitToolChangeWithCosts, getOperators } from '../lib/supabase.js';
 
 const normalizeOperatorOption = (operator) => {
   if (!operator) return null;
@@ -561,7 +561,7 @@ const ToolChangeForm = () => {
         new_finish_supplier: newFinishTool?.supplier_name || null
       };
 
-      const result = await addToolChange(cleanedData);
+      const result = await submitToolChangeWithCosts(cleanedData);
       setSubmitStatus('success');
 
       if (cleanedData.material_risk_score >= 5) {
