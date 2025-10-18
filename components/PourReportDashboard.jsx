@@ -45,8 +45,17 @@ const PourReportDashboard = ({ onNavigate = null }) => {
         Authorization: `Bearer ${supabaseKey}`
       };
 
-      const fetchJson = async (url) => {
-        const response = await fetch(url, { headers });
+      const fetchJson = async (url, { method = 'GET', body = null } = {}) => {
+        const requestHeaders = { ...headers };
+
+        const options = { method, headers: requestHeaders };
+
+        if (body !== null && body !== undefined) {
+          options.body = JSON.stringify(body);
+          options.headers['Content-Type'] = 'application/json';
+        }
+
+        const response = await fetch(url, options);
         const contentType = response.headers.get('content-type') || '';
 
         if (!response.ok) {
@@ -72,13 +81,18 @@ const PourReportDashboard = ({ onNavigate = null }) => {
         return [];
       };
 
-      const shiftUrl = `${supabaseUrl}/rest/v1/rpc/get_shift_performance?start_date=${encodeURIComponent(
-        dateRange.start
-      )}&end_date=${encodeURIComponent(dateRange.end)}`;
-
       const statsPromise = fetchJson(`${supabaseUrl}/rest/v1/pour_reports_dashboard_stats?select=*`);
-      const shiftPromise = fetchJson(shiftUrl);
-      const recentPromise = fetchJson(`${supabaseUrl}/rest/v1/rpc/get_recent_pours?days=7`);
+      const shiftPromise = fetchJson(`${supabaseUrl}/rest/v1/rpc/get_shift_performance`, {
+        method: 'POST',
+        body: {
+          start_date: dateRange.start,
+          end_date: dateRange.end
+        }
+      });
+      const recentPromise = fetchJson(`${supabaseUrl}/rest/v1/rpc/get_recent_pours`, {
+        method: 'POST',
+        body: { days: 7 }
+      });
 
       const fetchMonthlyKpi = async () => {
         const viewUrl = `${supabaseUrl}/rest/v1/pour_reports_kpi?select=*&order=month.desc`;
@@ -91,7 +105,7 @@ const PourReportDashboard = ({ onNavigate = null }) => {
 
           if (message.includes('could not find the table') || message.includes('schema cache')) {
             console.warn('View pour_reports_kpi unavailable, falling back to RPC function.', viewError);
-            return fetchJson(rpcUrl);
+            return fetchJson(rpcUrl, { method: 'POST' });
           }
 
           throw viewError;
