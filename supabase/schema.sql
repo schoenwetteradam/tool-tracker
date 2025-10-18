@@ -505,6 +505,30 @@ GROUP BY DATE_TRUNC('month', pour_date);
 GRANT SELECT ON pour_reports_dashboard_stats TO tool_tracker_public;
 GRANT SELECT ON pour_reports_kpi TO tool_tracker_public;
 
+CREATE OR REPLACE FUNCTION get_pour_reports_kpi()
+RETURNS TABLE (
+  month DATE,
+  total_pours BIGINT,
+  total_weight NUMERIC,
+  avg_pour_temp NUMERIC,
+  total_cost NUMERIC,
+  unique_grades BIGINT
+) AS $$
+  SELECT
+    DATE_TRUNC('month', pour_date)::DATE AS month,
+    COUNT(*) AS total_pours,
+    SUM(cast_weight) AS total_weight,
+    AVG(pour_temperature) AS avg_pour_temp,
+    SUM(COALESCE(cast_weight, 0) * COALESCE(cost_per_pound, 0)) AS total_cost,
+    COUNT(DISTINCT grade_name) AS unique_grades
+  FROM pour_reports
+  WHERE pour_date IS NOT NULL
+  GROUP BY DATE_TRUNC('month', pour_date)
+  ORDER BY DATE_TRUNC('month', pour_date) DESC;
+$$ LANGUAGE sql STABLE;
+
+GRANT EXECUTE ON FUNCTION get_pour_reports_kpi() TO tool_tracker_public;
+
 CREATE OR REPLACE FUNCTION get_recent_pours(days INTEGER DEFAULT 7)
 RETURNS TABLE (
   heat_number TEXT,

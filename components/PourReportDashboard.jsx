@@ -76,11 +76,33 @@ const PourReportDashboard = ({ onNavigate = null }) => {
         dateRange.start
       )}&end_date=${encodeURIComponent(dateRange.end)}`;
 
+      const statsPromise = fetchJson(`${supabaseUrl}/rest/v1/pour_reports_dashboard_stats?select=*`);
+      const shiftPromise = fetchJson(shiftUrl);
+      const recentPromise = fetchJson(`${supabaseUrl}/rest/v1/rpc/get_recent_pours?days=7`);
+
+      const fetchMonthlyKpi = async () => {
+        const viewUrl = `${supabaseUrl}/rest/v1/pour_reports_kpi?select=*&order=month.desc`;
+        const rpcUrl = `${supabaseUrl}/rest/v1/rpc/get_pour_reports_kpi`;
+
+        try {
+          return await fetchJson(viewUrl);
+        } catch (viewError) {
+          const message = (viewError?.message || '').toLowerCase();
+
+          if (message.includes('could not find the table') || message.includes('schema cache')) {
+            console.warn('View pour_reports_kpi unavailable, falling back to RPC function.', viewError);
+            return fetchJson(rpcUrl);
+          }
+
+          throw viewError;
+        }
+      };
+
       const [statsData, monthlyKpi, shiftData, recentData] = await Promise.all([
-        fetchJson(`${supabaseUrl}/rest/v1/pour_reports_dashboard_stats?select=*`),
-        fetchJson(`${supabaseUrl}/rest/v1/pour_reports_kpi?select=*&order=month.desc`),
-        fetchJson(shiftUrl),
-        fetchJson(`${supabaseUrl}/rest/v1/rpc/get_recent_pours?days=7`)
+        statsPromise,
+        fetchMonthlyKpi(),
+        shiftPromise,
+        recentPromise
       ]);
 
       setStats(Array.isArray(statsData) ? statsData[0] ?? null : statsData ?? null);
