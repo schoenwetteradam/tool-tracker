@@ -407,6 +407,19 @@ FROM pour_reports
 WHERE pour_date IS NOT NULL
 GROUP BY pour_date;
 
+DROP TABLE IF EXISTS die_utilization_stats;
+DROP MATERIALIZED VIEW IF EXISTS die_utilization_stats;
+DROP VIEW IF EXISTS die_utilization_stats;
+
+CREATE OR REPLACE VIEW die_utilization_stats AS
+SELECT
+  die_number,
+  COUNT(*) AS total_pours,
+  COALESCE(SUM(cast_weight), 0) AS total_weight
+FROM pour_reports
+WHERE die_number IS NOT NULL
+GROUP BY die_number;
+
 CREATE OR REPLACE VIEW temperature_control_by_grade AS
 SELECT
   pour_date AS day,
@@ -504,6 +517,7 @@ GROUP BY DATE_TRUNC('month', pour_date);
 
 GRANT SELECT ON pour_reports_dashboard_stats TO tool_tracker_public;
 GRANT SELECT ON pour_reports_kpi TO tool_tracker_public;
+GRANT SELECT ON die_utilization_stats TO tool_tracker_public;
 
 CREATE OR REPLACE FUNCTION get_pour_reports_kpi()
 RETURNS TABLE (
@@ -528,6 +542,7 @@ RETURNS TABLE (
 $$ LANGUAGE sql STABLE;
 
 GRANT EXECUTE ON FUNCTION get_pour_reports_kpi() TO tool_tracker_public;
+GRANT EXECUTE ON FUNCTION get_die_utilization(DATE, DATE, INTEGER) TO tool_tracker_public;
 
 CREATE OR REPLACE FUNCTION get_recent_pours(days INTEGER DEFAULT 7)
 RETURNS TABLE (
@@ -579,6 +594,29 @@ RETURNS TABLE (
     AND (end_date IS NULL OR pr.pour_date <= end_date)
   GROUP BY pr.shift
   ORDER BY pr.shift
+$$ LANGUAGE sql STABLE;
+
+CREATE OR REPLACE FUNCTION get_die_utilization(
+  start_date DATE DEFAULT NULL,
+  end_date DATE DEFAULT NULL,
+  limit_count INTEGER DEFAULT 10
+)
+RETURNS TABLE (
+  die_number INTEGER,
+  total_pours BIGINT,
+  total_weight NUMERIC
+) AS $$
+  SELECT
+    pr.die_number,
+    COUNT(*) AS total_pours,
+    COALESCE(SUM(pr.cast_weight), 0) AS total_weight
+  FROM pour_reports pr
+  WHERE pr.die_number IS NOT NULL
+    AND (start_date IS NULL OR pr.pour_date >= start_date)
+    AND (end_date IS NULL OR pr.pour_date <= end_date)
+  GROUP BY pr.die_number
+  ORDER BY COUNT(*) DESC
+  LIMIT GREATEST(COALESCE(limit_count, 10), 1)
 $$ LANGUAGE sql STABLE;
 
 CREATE OR REPLACE FUNCTION refresh_dashboard_stats()
