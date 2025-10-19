@@ -9,7 +9,10 @@ import {
   Calendar,
   Users,
   ArrowLeft,
-  FileText
+  FileText,
+  ThermometerSun,
+  TimerReset,
+  BarChart3
 } from 'lucide-react';
 
 const PourReportDashboard = ({ onNavigate = null }) => {
@@ -17,6 +20,7 @@ const PourReportDashboard = ({ onNavigate = null }) => {
   const [monthlyData, setMonthlyData] = useState([]);
   const [shiftPerformance, setShiftPerformance] = useState([]);
   const [recentPours, setRecentPours] = useState([]);
+  const [dieUtilization, setDieUtilization] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [dateRange, setDateRange] = useState({
@@ -112,17 +116,44 @@ const PourReportDashboard = ({ onNavigate = null }) => {
         }
       };
 
-      const [statsData, monthlyKpi, shiftData, recentData] = await Promise.all([
+      const fetchDieUtilization = async () => {
+        const viewUrl = `${supabaseUrl}/rest/v1/die_utilization_stats?select=*&order=total_pours.desc`;
+        const rpcUrl = `${supabaseUrl}/rest/v1/rpc/get_die_utilization`;
+
+        try {
+          return await fetchJson(viewUrl);
+        } catch (viewError) {
+          const message = (viewError?.message || '').toLowerCase();
+
+          if (message.includes('could not find the table') || message.includes('schema cache')) {
+            console.warn('View die_utilization_stats unavailable, falling back to RPC function.', viewError);
+            return fetchJson(rpcUrl, {
+              method: 'POST',
+              body: {
+                start_date: dateRange.start,
+                end_date: dateRange.end,
+                limit: 10
+              }
+            });
+          }
+
+          throw viewError;
+        }
+      };
+
+      const [statsData, monthlyKpi, shiftData, recentData, dieUtilData] = await Promise.all([
         statsPromise,
         fetchMonthlyKpi(),
         shiftPromise,
-        recentPromise
+        recentPromise,
+        fetchDieUtilization()
       ]);
 
       setStats(Array.isArray(statsData) ? statsData[0] ?? null : statsData ?? null);
       setMonthlyData(Array.isArray(monthlyKpi) ? monthlyKpi : []);
       setShiftPerformance(Array.isArray(shiftData) ? shiftData : []);
       setRecentPours(Array.isArray(recentData) ? recentData : []);
+      setDieUtilization(Array.isArray(dieUtilData) ? dieUtilData : []);
     } catch (fetchError) {
       console.error('Error fetching dashboard data:', fetchError);
       setError(fetchError.message || 'Failed to fetch dashboard data.');
@@ -274,7 +305,7 @@ const PourReportDashboard = ({ onNavigate = null }) => {
 
         {/* Key Metrics Row */}
         {stats && (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-6 mb-6">
             <KpiCard
               title="Total Pours YTD"
               value={stats.total_pours_ytd?.toLocaleString() || '0'}
@@ -302,6 +333,20 @@ const PourReportDashboard = ({ onNavigate = null }) => {
               subtitle={`Avg ${(stats.avg_weight_per_pour_ytd || 0).toFixed(1)} lbs/pour`}
               icon={DollarSign}
               color="purple"
+            />
+            <KpiCard
+              title="Avg Die Temp Before Pour"
+              value={`${Math.round(stats.avg_die_temp_before_pour || 0)}°F`}
+              subtitle="Tool readiness & consistency"
+              icon={ThermometerSun}
+              color="orange"
+            />
+            <KpiCard
+              title="Spin Time Avg"
+              value={`${(stats.avg_spin_time_minutes || 0).toFixed(1)} min`}
+              subtitle="Density & porosity control"
+              icon={TimerReset}
+              color="red"
             />
           </div>
         )}
@@ -341,6 +386,54 @@ const PourReportDashboard = ({ onNavigate = null }) => {
                 </div>
               ))}
             </div>
+            <div className="mt-6 rounded-lg border border-dashed border-gray-200 bg-gray-50 p-4">
+              <h3 className="mb-2 flex items-center gap-2 text-sm font-semibold text-gray-700">
+                <BarChart3 className="h-4 w-4 text-blue-600" />
+                Shift Productivity (Total Cast Weight)
+              </h3>
+              <div className="grid grid-cols-1 gap-2 text-sm md:grid-cols-3">
+                {shiftPerformance.map((shift) => (
+                  <div key={`shift-prod-${shift.shift}`} className="flex items-center justify-between rounded bg-white px-3 py-2 shadow-sm">
+                    <span className="text-gray-600">Shift {shift.shift}</span>
+                    <span className="font-semibold text-gray-800">{(shift.total_weight || 0).toLocaleString()} lbs</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Die Utilization */}
+        <div className="bg-white rounded-lg shadow mb-6">
+          <div className="flex items-center justify-between border-b border-gray-200 p-6">
+            <h2 className="text-2xl font-bold text-gray-800">Die Utilization</h2>
+            <p className="text-sm text-gray-500">Count of pours by die number</p>
+          </div>
+          <div className="p-6">
+            {dieUtilization.length === 0 ? (
+              <p className="text-sm text-gray-500">No die utilization data available for the selected range.</p>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="min-w-full">
+                  <thead>
+                    <tr className="bg-gray-50 border-b border-gray-200">
+                      <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Die Number</th>
+                      <th className="px-4 py-3 text-right text-sm font-semibold text-gray-700">Pours</th>
+                      <th className="px-4 py-3 text-right text-sm font-semibold text-gray-700">Total Weight (lbs)</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {dieUtilization.slice(0, 10).map((die, idx) => (
+                      <tr key={`${die.die_number || 'unknown'}-${idx}`} className="border-b border-gray-100 hover:bg-gray-50">
+                        <td className="px-4 py-3 text-sm font-medium text-gray-700">{die.die_number || 'N/A'}</td>
+                        <td className="px-4 py-3 text-sm text-right font-semibold text-gray-800">{die.total_pours || die.pour_count || 0}</td>
+                        <td className="px-4 py-3 text-sm text-right text-gray-700">{Math.round(die.total_weight || die.weight_sum || 0).toLocaleString()}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
           </div>
         </div>
 
