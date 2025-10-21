@@ -459,6 +459,9 @@ export default async function handler(req, res) {
     const formatPeriodLabel = (dateString) => {
       if (!dateString) return 'N/A'
       const date = new Date(dateString)
+      if (Number.isNaN(date.getTime())) {
+        return typeof dateString === 'string' && dateString.trim().length > 0 ? dateString : 'N/A'
+      }
       return date.toLocaleDateString('en-US', { month: 'short', year: 'numeric' })
     }
 
