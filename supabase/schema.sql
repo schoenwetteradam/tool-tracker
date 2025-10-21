@@ -346,6 +346,297 @@ CREATE INDEX IF NOT EXISTS idx_dimensional_measurements_date ON dimensional_meas
 CREATE INDEX IF NOT EXISTS idx_dimensional_measurements_product ON dimensional_measurements(product_number);
 
 -- ===============
+-- HEAT TREATMENT LOG & ANALYTICS
+-- ===============
+CREATE TABLE IF NOT EXISTS heat_treatment_log (
+  id BIGSERIAL PRIMARY KEY,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW(),
+  heat_number TEXT NOT NULL,
+  day_finished DATE NOT NULL,
+  furnace_number TEXT,
+  load_number TEXT,
+  load_type TEXT,
+  job_number TEXT,
+  part_number TEXT,
+  material_type TEXT,
+  cast_weight NUMERIC(12,3),
+  test_material TEXT,
+  temp1_fahrenheit NUMERIC(6,2),
+  time1_hours NUMERIC(6,2),
+  temp2_fahrenheit NUMERIC(6,2),
+  time2_hours NUMERIC(6,2),
+  temp3_fahrenheit NUMERIC(6,2),
+  time3_hours NUMERIC(6,2),
+  temp4_fahrenheit NUMERIC(6,2),
+  time4_hours NUMERIC(6,2),
+  hot_str_tir NUMERIC(10,5),
+  cold_str_tir NUMERIC(10,5),
+  hot_end_bhn NUMERIC(10,4),
+  cold_end_bhn NUMERIC(10,4),
+  gas_usage NUMERIC(14,4),
+  notes TEXT
+);
+
+CREATE INDEX IF NOT EXISTS idx_heat_treatment_log_day_finished ON heat_treatment_log(day_finished DESC);
+CREATE INDEX IF NOT EXISTS idx_heat_treatment_log_heat_number ON heat_treatment_log(heat_number);
+CREATE INDEX IF NOT EXISTS idx_heat_treatment_log_furnace ON heat_treatment_log(furnace_number);
+CREATE INDEX IF NOT EXISTS idx_heat_treatment_log_load_type ON heat_treatment_log(load_type);
+
+DROP VIEW IF EXISTS heat_treat_dashboard_stats;
+CREATE OR REPLACE VIEW heat_treat_dashboard_stats AS
+WITH base AS (
+  SELECT
+    day_finished::DATE AS day_finished,
+    DATE_TRUNC('month', day_finished)::DATE AS month_start,
+    DATE_TRUNC('year', day_finished)::DATE AS year_start,
+    COALESCE(cast_weight, 0)::NUMERIC AS cast_weight,
+    COALESCE(gas_usage, 0)::NUMERIC AS gas_usage,
+    (COALESCE(time1_hours, 0) + COALESCE(time2_hours, 0) + COALESCE(time3_hours, 0) + COALESCE(time4_hours, 0))::NUMERIC AS total_cycle_time,
+    time1_hours,
+    time2_hours,
+    time3_hours,
+    time4_hours,
+    CASE
+      WHEN hot_end_bhn IS NOT NULL AND cold_end_bhn IS NOT NULL THEN (hot_end_bhn + cold_end_bhn) / 2
+      WHEN hot_end_bhn IS NOT NULL THEN hot_end_bhn
+      WHEN cold_end_bhn IS NOT NULL THEN cold_end_bhn
+    END AS avg_bhn,
+    CASE
+      WHEN hot_str_tir IS NOT NULL AND cold_str_tir IS NOT NULL THEN (hot_str_tir + cold_str_tir) / 2
+      WHEN hot_str_tir IS NOT NULL THEN hot_str_tir
+      WHEN cold_str_tir IS NOT NULL THEN cold_str_tir
+    END AS avg_tir,
+    (COALESCE(temp1_fahrenheit, 0) + COALESCE(temp2_fahrenheit, 0) + COALESCE(temp3_fahrenheit, 0) + COALESCE(temp4_fahrenheit, 0)) AS temp_sum,
+    (
+      (CASE WHEN temp1_fahrenheit IS NOT NULL THEN 1 ELSE 0 END) +
+      (CASE WHEN temp2_fahrenheit IS NOT NULL THEN 1 ELSE 0 END) +
+      (CASE WHEN temp3_fahrenheit IS NOT NULL THEN 1 ELSE 0 END) +
+      (CASE WHEN temp4_fahrenheit IS NOT NULL THEN 1 ELSE 0 END)
+    ) AS temp_count,
+    temp1_fahrenheit,
+    temp2_fahrenheit,
+    temp3_fahrenheit,
+    temp4_fahrenheit,
+    hot_end_bhn,
+    cold_end_bhn,
+    hot_str_tir,
+    cold_str_tir
+  FROM heat_treatment_log
+  WHERE day_finished IS NOT NULL
+)
+SELECT
+  'month'::TEXT AS period_type,
+  month_start AS period_start,
+  EXTRACT(YEAR FROM month_start)::INT AS year,
+  EXTRACT(MONTH FROM month_start)::INT AS month,
+  COUNT(*) AS total_loads,
+  SUM(cast_weight) AS total_cast_weight,
+  AVG(total_cycle_time) AS avg_cycle_time_hours,
+  SUM(total_cycle_time) AS total_cycle_hours,
+  MIN(total_cycle_time) AS min_cycle_time_hours,
+  MAX(total_cycle_time) AS max_cycle_time_hours,
+  AVG(time1_hours) AS avg_stage1_time_hours,
+  AVG(time2_hours) AS avg_stage2_time_hours,
+  AVG(time3_hours) AS avg_stage3_time_hours,
+  AVG(time4_hours) AS avg_stage4_time_hours,
+  AVG(CASE WHEN temp_count > 0 THEN temp_sum / temp_count ELSE NULL END) AS avg_temperature_f,
+  AVG(avg_bhn) AS avg_bhn,
+  AVG(avg_tir) AS avg_tir,
+  SUM(gas_usage) AS total_gas_usage,
+  CASE WHEN SUM(cast_weight) > 0 THEN SUM(gas_usage) / SUM(cast_weight) ELSE NULL END AS specific_energy_consumption,
+  SUM(gas_usage) * 0.45 AS estimated_energy_cost,
+  AVG(temp1_fahrenheit) AS avg_stage1_temp,
+  AVG(temp2_fahrenheit) AS avg_stage2_temp,
+  AVG(temp3_fahrenheit) AS avg_stage3_temp,
+  AVG(temp4_fahrenheit) AS avg_stage4_temp,
+  AVG(hot_end_bhn) AS avg_hot_end_bhn,
+  AVG(cold_end_bhn) AS avg_cold_end_bhn,
+  AVG(hot_str_tir) AS avg_hot_tir,
+  AVG(cold_str_tir) AS avg_cold_tir,
+  COUNT(DISTINCT day_finished) AS calendar_days
+FROM base
+GROUP BY month_start
+UNION ALL
+SELECT
+  'year'::TEXT AS period_type,
+  year_start AS period_start,
+  EXTRACT(YEAR FROM year_start)::INT AS year,
+  NULL::INT AS month,
+  COUNT(*) AS total_loads,
+  SUM(cast_weight) AS total_cast_weight,
+  AVG(total_cycle_time) AS avg_cycle_time_hours,
+  SUM(total_cycle_time) AS total_cycle_hours,
+  MIN(total_cycle_time) AS min_cycle_time_hours,
+  MAX(total_cycle_time) AS max_cycle_time_hours,
+  AVG(time1_hours) AS avg_stage1_time_hours,
+  AVG(time2_hours) AS avg_stage2_time_hours,
+  AVG(time3_hours) AS avg_stage3_time_hours,
+  AVG(time4_hours) AS avg_stage4_time_hours,
+  AVG(CASE WHEN temp_count > 0 THEN temp_sum / temp_count ELSE NULL END) AS avg_temperature_f,
+  AVG(avg_bhn) AS avg_bhn,
+  AVG(avg_tir) AS avg_tir,
+  SUM(gas_usage) AS total_gas_usage,
+  CASE WHEN SUM(cast_weight) > 0 THEN SUM(gas_usage) / SUM(cast_weight) ELSE NULL END AS specific_energy_consumption,
+  SUM(gas_usage) * 0.45 AS estimated_energy_cost,
+  AVG(temp1_fahrenheit) AS avg_stage1_temp,
+  AVG(temp2_fahrenheit) AS avg_stage2_temp,
+  AVG(temp3_fahrenheit) AS avg_stage3_temp,
+  AVG(temp4_fahrenheit) AS avg_stage4_temp,
+  AVG(hot_end_bhn) AS avg_hot_end_bhn,
+  AVG(cold_end_bhn) AS avg_cold_end_bhn,
+  AVG(hot_str_tir) AS avg_hot_tir,
+  AVG(cold_str_tir) AS avg_cold_tir,
+  COUNT(DISTINCT day_finished) AS calendar_days
+FROM base
+GROUP BY year_start;
+
+DROP VIEW IF EXISTS heat_treat_kpi_by_furnace;
+CREATE OR REPLACE VIEW heat_treat_kpi_by_furnace AS
+WITH base AS (
+  SELECT
+    COALESCE(NULLIF(TRIM(furnace_number::TEXT), ''), 'Unknown') AS furnace_number,
+    day_finished::DATE AS day_finished,
+    DATE_TRUNC('month', day_finished)::DATE AS period_start,
+    (COALESCE(time1_hours, 0) + COALESCE(time2_hours, 0) + COALESCE(time3_hours, 0) + COALESCE(time4_hours, 0))::NUMERIC AS total_cycle_time,
+    time1_hours,
+    time2_hours,
+    time3_hours,
+    time4_hours,
+    COALESCE(cast_weight, 0)::NUMERIC AS cast_weight,
+    COALESCE(gas_usage, 0)::NUMERIC AS gas_usage,
+    CASE
+      WHEN hot_end_bhn IS NOT NULL AND cold_end_bhn IS NOT NULL THEN (hot_end_bhn + cold_end_bhn) / 2
+      WHEN hot_end_bhn IS NOT NULL THEN hot_end_bhn
+      WHEN cold_end_bhn IS NOT NULL THEN cold_end_bhn
+    END AS avg_bhn,
+    CASE
+      WHEN hot_str_tir IS NOT NULL AND cold_str_tir IS NOT NULL THEN (hot_str_tir + cold_str_tir) / 2
+      WHEN hot_str_tir IS NOT NULL THEN hot_str_tir
+      WHEN cold_str_tir IS NOT NULL THEN cold_str_tir
+    END AS avg_tir,
+    (
+      (COALESCE(temp1_fahrenheit, 0) + COALESCE(temp2_fahrenheit, 0) + COALESCE(temp3_fahrenheit, 0) + COALESCE(temp4_fahrenheit, 0))
+    ) AS temp_sum,
+    (
+      (CASE WHEN temp1_fahrenheit IS NOT NULL THEN 1 ELSE 0 END) +
+      (CASE WHEN temp2_fahrenheit IS NOT NULL THEN 1 ELSE 0 END) +
+      (CASE WHEN temp3_fahrenheit IS NOT NULL THEN 1 ELSE 0 END) +
+      (CASE WHEN temp4_fahrenheit IS NOT NULL THEN 1 ELSE 0 END)
+    ) AS temp_count,
+    hot_end_bhn,
+    cold_end_bhn,
+    hot_str_tir,
+    cold_str_tir
+  FROM heat_treatment_log
+  WHERE day_finished IS NOT NULL
+)
+SELECT
+  furnace_number,
+  period_start,
+  COUNT(*) AS total_loads,
+  SUM(cast_weight) AS total_cast_weight,
+  SUM(gas_usage) AS total_gas_usage,
+  AVG(total_cycle_time) AS avg_cycle_time_hours,
+  SUM(total_cycle_time) AS total_cycle_hours,
+  MIN(total_cycle_time) AS min_cycle_time_hours,
+  MAX(total_cycle_time) AS max_cycle_time_hours,
+  AVG(time1_hours) AS avg_stage1_time_hours,
+  AVG(time2_hours) AS avg_stage2_time_hours,
+  AVG(time3_hours) AS avg_stage3_time_hours,
+  AVG(time4_hours) AS avg_stage4_time_hours,
+  COUNT(DISTINCT day_finished) AS calendar_days,
+  CASE WHEN COUNT(DISTINCT day_finished) > 0 THEN SUM(total_cycle_time) / (COUNT(DISTINCT day_finished) * 24.0) ELSE 0 END AS utilization_rate,
+  CASE WHEN SUM(cast_weight) > 0 THEN SUM(gas_usage) / SUM(cast_weight) ELSE NULL END AS specific_energy_consumption,
+  AVG(CASE WHEN temp_count > 0 THEN temp_sum / temp_count ELSE NULL END) AS avg_temperature_f,
+  AVG(avg_bhn) AS avg_bhn,
+  AVG(avg_tir) AS avg_tir,
+  AVG(hot_end_bhn) AS avg_hot_end_bhn,
+  AVG(cold_end_bhn) AS avg_cold_end_bhn,
+  AVG(hot_str_tir) AS avg_hot_tir,
+  AVG(cold_str_tir) AS avg_cold_tir
+FROM base
+GROUP BY furnace_number, period_start;
+
+DROP VIEW IF EXISTS heat_treat_kpi_by_load_type;
+CREATE OR REPLACE VIEW heat_treat_kpi_by_load_type AS
+WITH base AS (
+  SELECT
+    COALESCE(NULLIF(TRIM(load_type), ''), 'Unknown') AS load_type,
+    day_finished::DATE AS day_finished,
+    DATE_TRUNC('month', day_finished)::DATE AS period_start,
+    (COALESCE(time1_hours, 0) + COALESCE(time2_hours, 0) + COALESCE(time3_hours, 0) + COALESCE(time4_hours, 0))::NUMERIC AS total_cycle_time,
+    time1_hours,
+    time2_hours,
+    time3_hours,
+    time4_hours,
+    COALESCE(cast_weight, 0)::NUMERIC AS cast_weight,
+    COALESCE(gas_usage, 0)::NUMERIC AS gas_usage,
+    CASE
+      WHEN hot_end_bhn IS NOT NULL AND cold_end_bhn IS NOT NULL THEN (hot_end_bhn + cold_end_bhn) / 2
+      WHEN hot_end_bhn IS NOT NULL THEN hot_end_bhn
+      WHEN cold_end_bhn IS NOT NULL THEN cold_end_bhn
+    END AS avg_bhn,
+    CASE
+      WHEN hot_str_tir IS NOT NULL AND cold_str_tir IS NOT NULL THEN (hot_str_tir + cold_str_tir) / 2
+      WHEN hot_str_tir IS NOT NULL THEN hot_str_tir
+      WHEN cold_str_tir IS NOT NULL THEN cold_str_tir
+    END AS avg_tir,
+    CASE
+      WHEN hot_end_bhn IS NOT NULL AND cold_end_bhn IS NOT NULL THEN ABS(hot_end_bhn - cold_end_bhn)
+    END AS bhn_delta,
+    CASE
+      WHEN hot_str_tir IS NOT NULL AND cold_str_tir IS NOT NULL THEN ABS(hot_str_tir - cold_str_tir)
+    END AS tir_delta,
+    (
+      (COALESCE(temp1_fahrenheit, 0) + COALESCE(temp2_fahrenheit, 0) + COALESCE(temp3_fahrenheit, 0) + COALESCE(temp4_fahrenheit, 0))
+    ) AS temp_sum,
+    (
+      (CASE WHEN temp1_fahrenheit IS NOT NULL THEN 1 ELSE 0 END) +
+      (CASE WHEN temp2_fahrenheit IS NOT NULL THEN 1 ELSE 0 END) +
+      (CASE WHEN temp3_fahrenheit IS NOT NULL THEN 1 ELSE 0 END) +
+      (CASE WHEN temp4_fahrenheit IS NOT NULL THEN 1 ELSE 0 END)
+    ) AS temp_count,
+    hot_end_bhn,
+    cold_end_bhn,
+    hot_str_tir,
+    cold_str_tir
+  FROM heat_treatment_log
+  WHERE day_finished IS NOT NULL
+)
+SELECT
+  load_type,
+  period_start,
+  COUNT(*) AS total_loads,
+  SUM(cast_weight) AS total_cast_weight,
+  SUM(gas_usage) AS total_gas_usage,
+  AVG(total_cycle_time) AS avg_cycle_time_hours,
+  SUM(total_cycle_time) AS total_cycle_hours,
+  MIN(total_cycle_time) AS min_cycle_time_hours,
+  MAX(total_cycle_time) AS max_cycle_time_hours,
+  AVG(time1_hours) AS avg_stage1_time_hours,
+  AVG(time2_hours) AS avg_stage2_time_hours,
+  AVG(time3_hours) AS avg_stage3_time_hours,
+  AVG(time4_hours) AS avg_stage4_time_hours,
+  COUNT(DISTINCT day_finished) AS calendar_days,
+  AVG(CASE WHEN temp_count > 0 THEN temp_sum / temp_count ELSE NULL END) AS avg_temperature_f,
+  AVG(avg_bhn) AS avg_bhn,
+  AVG(avg_tir) AS avg_tir,
+  AVG(hot_end_bhn) AS avg_hot_end_bhn,
+  AVG(cold_end_bhn) AS avg_cold_end_bhn,
+  AVG(bhn_delta) AS avg_delta_bhn,
+  AVG(hot_str_tir) AS avg_hot_tir,
+  AVG(cold_str_tir) AS avg_cold_tir,
+  AVG(tir_delta) AS avg_delta_tir,
+  CASE WHEN SUM(cast_weight) > 0 THEN SUM(gas_usage) / SUM(cast_weight) ELSE NULL END AS specific_energy_consumption
+FROM base
+GROUP BY load_type, period_start;
+
+GRANT SELECT ON heat_treat_dashboard_stats TO tool_tracker_public;
+GRANT SELECT ON heat_treat_kpi_by_furnace TO tool_tracker_public;
+GRANT SELECT ON heat_treat_kpi_by_load_type TO tool_tracker_public;
+
+-- ===============
 -- POUR REPORTS & ANALYTICS
 -- ===============
 CREATE TABLE IF NOT EXISTS pour_reports (
